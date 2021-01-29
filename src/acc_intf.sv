@@ -21,7 +21,7 @@ interface ACC_BUS #(
   // The number of requesters.
   // parameter int          NumRequesters = -1,
   // The number of responders.
-  // parameter int          NumResponders = -1,
+  // parameter int          NumRsp = -1,
 
   // ISA bit width
   parameter int unsigned DataWidth       = 32,
@@ -31,28 +31,28 @@ interface ACC_BUS #(
   parameter int unsigned IdWidth         = 5
 );
 
-  // localparam int unsigned AccAddrWidth = $clog2(NumResponders) + 1; // +1 for sharing level.
+  // localparam int unsigned AccAddrWidth = $clog2(NumRsp) + 1; // +1 for sharing level.
   // localparam int unsigned IdWidthReq      = 5;
   // Extend ID tag on the response path.
-  // localparam int unsigned IdxWidth        = cf_math_kg::idx_width(NumRequesters);/
+  // localparam int unsigned IdxWidth        = cf_math_pkg::idx_width(NumRequesters);/
   // localparam int unsigned IdWidthResp     = 5 + IdxWidth;
 
   typedef logic [DataWidth-1:0] data_t;
 
 
   // Request channel (Q).
-  logic [AccAddrWidth-1:0] q_addr;
+  logic [AccAddrWidth-1:0]    q_addr;
   logic [31:0]                q_data_op;
   data_t                      q_data_arga;
   data_t                      q_data_argb;
   data_t                      q_data_argc;
-  logic [IDWidth-1:0]         q_id;
+  logic [IdWidth-1:0]         q_id;
   logic                       q_valid;
   logic                       q_ready;
 
   // Response Channel (P).
   data_t                  p_data;
-  logic [IDWidth-1:0]     p_id;
+  logic [IdWidth-1:0]     p_id;
   logic                   p_error;
   logic                   p_valid;
   logic                   p_ready;
@@ -74,7 +74,7 @@ interface ACC_BUS_DV #(
   // The number of requesters
   // parameter int NumRequesters = -1,
   // The number of respondrs
-  // parameter int NumResponders = -1,
+  // parameter int NumRsp = -1,
 
   // ISA bit width
   parameter int unsigned DataWidth       = 32,
@@ -88,10 +88,10 @@ interface ACC_BUS_DV #(
 
 
 
-  // localparam int unsigned AccAddrWidth = $clog2(NumResponders) + 1; // +1 for sharing level.
+  // localparam int unsigned AccAddrWidth = $clog2(NumRsp) + 1; // +1 for sharing level.
   // localparam int unsigned IdWidthReq      = 5;
   // Extend ID tag on the response path.
-  // localparam int unsigned IdxWidth       = cf_math_kg::idx_width(NumRequesters);
+  // localparam int unsigned IdxWidth       = cf_math_pkg::idx_width(NumRequesters);
   // localparam int unsigned IdWidthResp     = 5 + IdxWidth;
 
   typedef logic [DataWidth-1:0] data_t;
@@ -99,10 +99,10 @@ interface ACC_BUS_DV #(
 
   // Request channel (Q).
   logic [AccAddrWidth-1:0] q_addr;
-  logic [31:0]                q_data_op;
-  data_t                      q_data_arga;
-  data_t                      q_data_argb;
-  data_t                      q_data_argc;
+  logic [31:0]             q_data_op;
+  data_t                   q_data_arga;
+  data_t                   q_data_argb;
+  data_t                   q_data_argc;
   logic [IdWidth-1:0]      q_id;
 
   logic q_valid;
