@@ -3,11 +3,11 @@
 The `accelerator_interface` is a portable interface for RISC-V CPU cores to communicate with external functional units.
 The interface provides a unified way to implement custom ISA extensions in external accelerator structures and to share accelerator units among multiple cores.
 The design concurrently supports core-private and shared functional units.
-It implements two independent decoupled channels (request and response) which are handshaked according to the AMBA standard.
+It implements two independent decoupled channels (request and response) which are handshaked according to the following scheme:
 
-  - The initiator asserts `valid`. The assertion of `valid` must not depend on `ready`.
+  - The initiator asserts `valid`. The assertion of `valid` must not depend on `ready`. The assertion of `ready` may depend on `valid`.
   - Once `valid` has been asserted all data must remain stable.
-  - The receiver asserts `ready` whenever it is ready to receive the transaction.
+  - The receiver asserts `ready` whenever it is ready to receive the transaction. Asserting `ready` by default is allowed. While `valid` is low, `ready` may be retracted at any time.
   - When both `valid` and `ready` are high the transaction is successful.
 
 ## Parameters
