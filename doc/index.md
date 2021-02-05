@@ -107,5 +107,14 @@ For more information, ideas and contributions to the subject, please refer to th
 
 ### Accelerator-Agnostic Cores
 To decouple the development of accelerators and cores, it may be beneficial separate the handling of offloaded instructions from the rest of the core's operation.
+An external pre-decoder structure may be implemented to facilitate this use case.
+
+A tentative specification thereof is given [here](accelerator_agnostic_interface.md)
 
 For more information, ideas and contributions to the subject, please refer to the corresponding [issue](https://github.com/ganoam/accelerator-interface/issues/1).
+
+### Multiple-Writeback Instructions
+TODO
+
+### External Register Files
+TODO
