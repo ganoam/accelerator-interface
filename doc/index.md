@@ -73,6 +73,7 @@ Any source registers from the integer register file of the offloading core and e
 If source registers are used, operand A, B and C contain `rs1`, `rs2` and `rs3` respectively.
 For ternary instructions, the instruction format R4-type instruction format is to be used, defining the `rs3` register address by bits `instr_data[31:27]`.
 
+
 ## Accelerator Support
 In order to accept instructions off the accelerator interface, an accelerator subsystem must decode the RISC-V instruction data and generate the specific control signals for communication with the accelerator.
 For instructions mandating writeback to the core, the request ID must be returned together with the according response packet.
@@ -104,6 +105,11 @@ To handle this case, we could implement a memory fence instruction, which would 
 
 For more information, ideas and contributions to the subject, please refer to the corresponding [issue](https://github.com/ganoam/accelerator-interface/issues/2).
 
+### External Register Files
+*Tentative specification*
+In case of shared accelerators relying on dedicated register files, a shared accelerator needs to maintain one private register file per sharing core.
+Similarly, for status-based extensions the accelerator subsystem must separately maintain the the status of each core.
+
 
 ### Accelerator-Agnostic Cores
 To decouple the development of accelerators and cores, it may be beneficial separate the handling of offloaded instructions from the rest of the core's operation.
@@ -113,8 +119,14 @@ A tentative specification thereof is given [here](accelerator_agnostic_interface
 
 For more information, ideas and contributions to the subject, please refer to the corresponding [issue](https://github.com/ganoam/accelerator-interface/issues/1).
 
-### Multiple-Writeback Instructions
-TODO
 
-### External Register Files
-TODO
+### Dual-Writeback Instructions
+The default writeback destination for offloaded instruction is the RISC-V destination register specified by `instr_data[11:7]`.
+Custom ISA extensions may mandate dual-register writebacks.
+In order to accomodate that need we may provision the possibility to reserve multiple destination registers for a single offloaded instruction.
+Two natural solutions come to mind
+- For instructions mandating dual write-back, registers `Xn` and `Xn+1` are reserved for write-back upon offloading an instruction, where `Xn` denotes the destination register addresss extracted from `instr_data[11:7]`.
+- One or more of the source registers may double as additional write-back locations.
+
+On the core side we do not need to take any provisions other than marking outstanding write-backs in the scoreboard.
+The actual writeback for any offloaded instruction is always initiated by the external accelerator.

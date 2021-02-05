@@ -71,5 +71,6 @@ The write-back process for offloaded instructions is no different that for the n
 Upon an accelerator response, the offloading core must write back the result to its register file and lift the reservation on the destination register address.
 Communication with the response-side of the accelerator interconnect is to be implemented in the offloading core logic.
 
-
-
+## Open Questions
+- How to handle compressed instructions? - see [Issue](https://github.com/ganoam/accelerator-interface/issues/3).
+- How to handle multiple-writeback instructions?
