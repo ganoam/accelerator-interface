@@ -32,8 +32,9 @@ The pre-decoder communicates to the offloading core via the the following signal
 
 The following signals are permanently exposed to the pre-decoder.
 | Name                | Range           | Dicection           | Description                                      |
+| ------------------- | --------------- | ------------------- | ------------------------------------------------ |
 | `rs1`, `rs2`, `rs3` | `DataWidth-1:0` | Core-> Pre-Decoder  | Source register contents.                        |
-| `instr_rdata`       | `31:0`          |
+| `instr_rdata`       | `31:0`          | Core-> Pre-Decoder  | RISC-V Instruction Data                          |
 
 Remarks:
 - The transaction is initiated by the core using `offload_valid` and terminated by the pre-decoder using `offload_ready`.
