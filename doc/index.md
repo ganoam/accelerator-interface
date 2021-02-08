@@ -73,6 +73,37 @@ Any source registers from the integer register file of the offloading core and e
 If source registers are used, operand A, B and C contain `rs1`, `rs2` and `rs3` respectively.
 For ternary instructions, the instruction format R4-type instruction format is to be used, defining the `rs3` register address by bits `instr_data[31:27]`.
 
+### Write-back Destination
+The default writeback destination for offloaded instruction is the RISC-V destination register specified by `instr_data[11:7]`.
+
+### Dual-Writeback Instructions
+This section of the specification provides *preliminary* information.
+The contents are subject to discussion and may change anytime.
+
+Custom ISA extensions may mandate dual-register writebacks.
+In order to accomodate that need we may provision the possibility to reserve multiple destination registers for a single offloaded instruction.
+For even destination registers other than `X0`,  `Xn` and `Xn+1` are reserved for write-back upon offloading an instruction, where `Xn` denotes the destination register addresss extracted from `instr_data[11:7]`.
+
+#### Implications on the Interconnect
+In order to maximize benefits from dual-writeback instructions, the interconnect response path must be adapted to accomodate simultaneous transfer of two operation results.
+The modified response interface supports the following signals.
+
+| Signal Name   | Range                   | Description                          |
+| ------------- | ----------------------- | ------------------------------------ |
+| `p_id`        | `5 + clog2(NumReq)-1:5` | Requester ID                         |
+|               | `4:0`                   | Destination Register Address         |
+| `p_data0`     | `DataWidth-1:0`         | Primary Writeback Data               |
+| `p_data1`     | `DataWidth-1:0`         | Secondary Writeback Data             |
+| `p_dualwb`    | `0:0`                   | Dual-Writeback Response.             |
+| `p_error`     | `0:0`                   | Error Flag                           |
+
+For responses resulting from dual-writeback instructions, the accelerator asserts `p_dualwb`.
+Upon accepting the accelerator response, the offloading core writes back data contained in `p_data0` to register `p_id[4:0]`.
+`p_data1` is written back to `p_id[4:0]` + 1.
+
+#### Implications on Core implementation
+The offloading core must include provisions to reserve two destination registers upon offloading an instruction.
+For maximum benefits, the core should include provisions for simultaneous writeback, implying dual write-ports to the internal register file.
 
 ## Accelerator Support
 In order to accept instructions off the accelerator interface, an accelerator subsystem must decode the RISC-V instruction data and generate the specific control signals for communication with the accelerator.
@@ -120,13 +151,3 @@ A tentative specification thereof is given [here](accelerator_agnostic_interface
 For more information, ideas and contributions to the subject, please refer to the corresponding [issue](https://github.com/ganoam/accelerator-interface/issues/1).
 
 
-### Dual-Writeback Instructions
-The default writeback destination for offloaded instruction is the RISC-V destination register specified by `instr_data[11:7]`.
-Custom ISA extensions may mandate dual-register writebacks.
-In order to accomodate that need we may provision the possibility to reserve multiple destination registers for a single offloaded instruction.
-Two natural solutions come to mind
-- For instructions mandating dual write-back, registers `Xn` and `Xn+1` are reserved for write-back upon offloading an instruction, where `Xn` denotes the destination register addresss extracted from `instr_data[11:7]`.
-- One or more of the source registers may double as additional write-back locations.
-
-On the core side we do not need to take any provisions other than marking outstanding write-backs in the scoreboard.
-The actual writeback for any offloaded instruction is always initiated by the external accelerator.
