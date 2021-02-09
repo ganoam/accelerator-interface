@@ -28,7 +28,7 @@ The pre-decoder communicates to the offloading core via the the following signal
 | `offload_ready`     | `0:0`           | Pre-Decoder -> Core | All information accquired. Complete transaction. |
 | `offload_rs_valid`  | `2:0`           | Core -> Pre-Decoder | Source register `i` is valid                     |
 | `offload_accept`    | `0:0`           | Pre-Decoder -> Core | Instruction accepted by external accelerator.    |
-| `offload_wb`        | `0:0`           | Pre-Decoder -> Core | Expect writeback (reserve `rd_address`).         |
+| `offload_wb`        | `1:0`           | Pre-Decoder -> Core | Expect writeback on registers `{rd_address, rd_address+1}`).         |
 
 The following signals are permanently exposed to the pre-decoder.
 | Name                | Range           | Dicection           | Description                                      |
@@ -47,8 +47,6 @@ Remarks:
 - `offload_accept` indicates the instruction is a accepeted by one of the connected accelerators.
   If a transaction is completed without asserting `offload_accept`, the core must raise an illegal instruction exception.
 
-
-
 ### Operating Principle
 The instruction offloading process takes place without further information on the nature of the performed operation to the core.
 The RISC-V instruction data, the three source registers and a set of custom pre-decoder interface signals are permanently exposed by the offloading core to the pre-decoder structure.
@@ -60,6 +58,9 @@ The sequence for offloading instructions to external accelerators is as follows
 - The instruction data is fed into each of the dedicated accelerator subdecoders.
   Upon encountering an offloadable instruction, a subdecoder generates operand select signals `offl_ops_sel`, determines weather to expect writeback from this operation `offl_wb` and raises `offl_accept`.
   The signal `offload_wb` indicates to the core weather to expect writeback from this operation.
+  `offload_wb[0]` corresponds to the default destination register address.
+  `offload_wb[1]` corresponds to the default destination register address incremented by 1 (see [base specification](index.md)).
+
   If writeback is expected, the core must reserve the destination register in its scoreboard.
 - The collection of `offload_accept` signals from the subdecoders is used to determine the accelerator address to which the instruction will be offloaded by the interconnect handshaker and to indicate a valid offload instruction to the core handshaker.
 - The signal `offload_rs_valid` indicates to the pre-decoder which of the exposed source register data is currently valid.

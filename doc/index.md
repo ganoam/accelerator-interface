@@ -13,13 +13,13 @@ It implements two independent decoupled channels (request and response) which ar
 ## Parameters
 The interface is compatible with 32, 64 and 128-bit RISC-V ISA variants.
 It is designed to work with a configurable number of requesters and (shared) responders.
-The according configuration parameters are:
+The top level configuration parameters are:
 
 | Name               | Type / Range                                     | Default | Description                                |
 | ------------------ | ------------------------------------------------ | ------- | ------------------------------------------ |
-| `NumReq`           | `int` (>= 1)                                   | 1       | Number of requesting entities              |
-| `NumRespPriv`      | `int` (0, ...)                                   | 1       | Number of core-private responding entities |
-| `NumRespShared`    | `int` (0, ...)                                   | 1       | Number of shared responding entities       |
+| `NumReq`           | `int` (>=1)                                      | 1       | Number of requesting entities              |
+| `NumRespPriv`      | `int` (>=0)                                      | 1       | Number of core-private responding entities |
+| `NumRespShared`    | `int` (>=0)                                      | 1       | Number of shared responding entities       |
 | `AccAddrWidth`     | `int` clog2(max(NumRespPriv, NumRespShared)) + 1 |         | Accelerator Address                        |
 | `DataWidth`        | `int` (32, 64, 128)                              | 32      | ISA Bit Width                              |
 
@@ -33,18 +33,22 @@ The request channel interface signals are:
 
 | Signal Name   | Range                   | Description                          |
 | ------------- | ----------------------- | ------------------------------------ |
-| `q_addr`      | `AccAddrWidth`          | Accelerator Sharing Level            |
-|               | `AccAddrWidth-1:0`      | Accelerator Address                  |
-| `q_id`        | `5 + clog2(NumReq)-1:5` | Requester ID                         |
-|               | `4:0`                   | Destination Register Address         |
+| `q_addr`      | `AccAddrWidth-1`        | Accelerator Sharing Level            |
+|               | `AccAddrWidth-2:0`      | Accelerator Address                  |
+| `q_req_id`    | `clog2(NumReq)-1:0`     | Requester ID                         |
+| `q_rd_id`     | `4:0`                   | Destination Register Address         |
 | `q_data_op`   | `31:0`                  | RISC-V Instruction Data              |
 | `q_data_arga` | `DataWidth-1:0`         | Operand A                            |
 | `q_data_argb` | `DataWidth-1:0`         | Operand B                            |
 | `q_data_argc` | `DataWidth-1:0`         | Operand C                            |
 
+
 Notes:
-  - The *Requester ID* field of the signal `q_id` is assigned during traversal of the request path.
-    The *destination register address* is determined by the offloading core.
+  - The *Requester ID* is assigned during traversal of the request path.
+    In core-private accelerator interconnects it will be assigned to constant zero.
+    In shared accelerator interconnect the field identifies the offloading cores to facilitate core-specific operations back-routing responses.
+  - Core-private accelerators are accessed by setting the MSB `q_addr` to 0.
+    Requests to cluster-level shared accelerators are issued by setting the MSB of `q_addr` to 1.
 
 ### Response Channel (`p`)
 *Not* every operation which was offloaded must ultimately return a response.
@@ -52,10 +56,21 @@ If a response is returned, the response channel carries the following signals:
 
 | Signal Name   | Range                   | Description                          |
 | ------------- | ----------------------- | ------------------------------------ |
-| `p_id`        | `5 + clog2(NumReq)-1:5` | Requester ID                         |
-|               | `4:0`                   | Destination Register Address         |
-| `p_data`      | `DataWidth-1:0`         | Operation Result                     |
+| `p_req_id`    | `clog2(NumReq)-1:0`     | Requester ID                         |
+| `p_rd_id`     | `4:0`                   | Destination Register Address         |
+| `p_data0`     | `DataWidth-1:0`         | Primary Writeback Data               |
+| `p_data1`     | `DataWidth-1:0`         | Secondary Writeback Data             |
+| `p_dualwb`    | `0:0`                   | Dual-Writeback Response.             |
 | `p_error`     | `0:0`                   | Error Flag                           |
+
+Notes:
+  - The *Requester ID* signal is used to route responses generated in external accelerators back to the offloading core.
+  - `p_data0` and `p_data1` carry the response data resulting from offloaded instructions.
+    `p_data0` carries the default write-back data and is written to the destination register identified by `p_rd_id`.
+    `p_data1` is used only for dual-writeback instructions.
+  - Dual write-back instructions are marked by the accelerator sub-system by setting `p_dualwb`.
+  - The error flag included in the response channel indicates processing errors encountered by the accelerator.
+    The actions to be taken by a core to recover from accelerator errors are not yet fully defined.
 
 ## Core Support
 In order to make use of the accelerator interface, a compliant core must
@@ -80,36 +95,34 @@ The default writeback destination for offloaded instruction is the RISC-V destin
 This section of the specification provides *preliminary* information.
 The contents are subject to discussion and may change anytime.
 
-Custom ISA extensions may mandate dual-register writebacks.
-In order to accomodate that need we may provision the possibility to reserve multiple destination registers for a single offloaded instruction.
-For even destination registers other than `X0`,  `Xn` and `Xn+1` are reserved for write-back upon offloading an instruction, where `Xn` denotes the destination register addresss extracted from `instr_data[11:7]`.
-
-#### Implications on the Interconnect
-In order to maximize benefits from dual-writeback instructions, the interconnect response path must be adapted to accomodate simultaneous transfer of two operation results.
-The modified response interface supports the following signals.
-
-| Signal Name   | Range                   | Description                          |
-| ------------- | ----------------------- | ------------------------------------ |
-| `p_id`        | `5 + clog2(NumReq)-1:5` | Requester ID                         |
-|               | `4:0`                   | Destination Register Address         |
-| `p_data0`     | `DataWidth-1:0`         | Primary Writeback Data               |
-| `p_data1`     | `DataWidth-1:0`         | Secondary Writeback Data             |
-| `p_dualwb`    | `0:0`                   | Dual-Writeback Response.             |
-| `p_error`     | `0:0`                   | Error Flag                           |
+Custom ISA extensions may mandate dual register writebacks.
+In order to accomodate that need we provision the possibility to reserve multiple destination registers for a single offloaded instruction.
+For even destination registers other than `X0`,  `Xn` and `Xn+1` are reserved for write-back upon offloading a dual write-back instruction, where `Xn` denotes the destination register addresss extracted from `instr_data[11:7]`.
 
 For responses resulting from dual-writeback instructions, the accelerator asserts `p_dualwb`.
 Upon accepting the accelerator response, the offloading core writes back data contained in `p_data0` to register `p_id[4:0]`.
 `p_data1` is written back to `p_id[4:0]` + 1.
 
-#### Implications on Core implementation
-The offloading core must include provisions to reserve two destination registers upon offloading an instruction.
-For maximum benefits, the core should include provisions for simultaneous writeback, implying dual write-ports to the internal register file.
+
+In order to maximize benefits from dual-writeback instructions, the interconnect response path must accomodate simultaneous transfer of two operation results (`p_data0` and `p_data1`).
+If none of the connected accelerators implement dual write-back instructions, the according signal paths will be removed by synthesis tools.
+
+In order to support accelerators implementing dual write-back instructions, the offloading core must include provisions to reserve two destination registers upon offloading an instruction.
+Also, the core should include provisions for simultaneous writeback, implying dual write-ports to the internal register file.
+
+### Accelerator-Agnostic Cores
+To decouple the development of accelerators and cores, it may be beneficial separate the handling of offloaded instructions from the rest of the core's operation.
+An external pre-decoder structure may be implemented to facilitate this use case.
+
+A tentative specification thereof is given [here](accelerator_agnostic_interface.md)
 
 ## Accelerator Support
 In order to accept instructions off the accelerator interface, an accelerator subsystem must decode the RISC-V instruction data and generate the specific control signals for communication with the accelerator.
 For instructions mandating writeback to the core, the request ID must be returned together with the according response packet.
 
 ![Accelerator Subsystem](img/acc-ss.svg)
+
+
 
 ## Interconnect Layout
 The accelerator interconnect supposts external accelerators aranged in two levels.
@@ -140,14 +153,4 @@ For more information, ideas and contributions to the subject, please refer to th
 *Tentative specification*
 In case of shared accelerators relying on dedicated register files, a shared accelerator needs to maintain one private register file per sharing core.
 Similarly, for status-based extensions the accelerator subsystem must separately maintain the the status of each core.
-
-
-### Accelerator-Agnostic Cores
-To decouple the development of accelerators and cores, it may be beneficial separate the handling of offloaded instructions from the rest of the core's operation.
-An external pre-decoder structure may be implemented to facilitate this use case.
-
-A tentative specification thereof is given [here](accelerator_agnostic_interface.md)
-
-For more information, ideas and contributions to the subject, please refer to the corresponding [issue](https://github.com/ganoam/accelerator-interface/issues/1).
-
 
