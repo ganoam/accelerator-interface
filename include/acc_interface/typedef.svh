@@ -16,7 +16,7 @@
     __id_t               req_id;                               \
     logic [4:0]          rd_id;                                \
   } __req_chan_t;
-
+// TODO: Addr in channel.
 `define ACC_TYPEDEF_REQ_T(__req_t, __req_chan_t, __addr_t) \
   typedef struct packed {                                  \
     __req_chan_t q;                                        \

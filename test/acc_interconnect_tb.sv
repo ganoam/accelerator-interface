@@ -255,7 +255,6 @@ module acc_interconnect_tb  #(
               end
               // TODO: is this legal? (forked processes modifying same var)
               nr_requests++;
-              // $display("Nr Requests: %d", nr_requests);
             end // -- forever
           join_none
         end // -- for (int i=0; i<NumRsp; i++)

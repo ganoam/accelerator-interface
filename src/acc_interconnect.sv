@@ -29,6 +29,8 @@ module acc_interconnect #(
   input clk_i,
   input rst_ni,
 
+  // TODO: change back to single id field -> different req_t at slv and master
+  // ports.
   input  req_t [NumReq-1:0] mst_req_i,
   output rsp_t [NumReq-1:0] mst_rsp_o,
 
@@ -67,6 +69,7 @@ module acc_interconnect #(
     assign mst_req_p_ready[i] = mst_req_i[i].p_ready;
   end
 
+  // TODO: unpacking macro??
   for (genvar i=0; i<NumRsp; i++) begin : gen_slv_req_assignment
     // Assign payload signals
     assign slv_req_o[i].q.data_arga = slv_req_q_chan[i].data_arga;

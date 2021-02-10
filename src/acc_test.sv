@@ -8,6 +8,8 @@ package acc_test;
 
   import acc_pkg::*;
 
+  // TODO: NumResp dependency outside: with constraint, und definiere
+  // constraint draussen.
   class req_t #(
     parameter int AccAddrWidth = -1,
     parameter int DataWidth    = -1,
@@ -326,6 +328,7 @@ package acc_test;
 
 // Generate random requests as a master device.
   class rand_acc_master #(
+    // TODO: send out multiple requests at time.
     // Acc interface parameters
     parameter int DataWidth    = -1,
     parameter int AccAddrWidth = -1,
@@ -401,6 +404,8 @@ package acc_test;
   endclass
 
   class rand_acc_slave #(
+    // TODO: Accept multiple requests at the time
+    // TODO: enforce ordering per id.
     // Acc interface parameters
     parameter int AccAddrWidth = -1,
     parameter int DataWidth    = -1,
