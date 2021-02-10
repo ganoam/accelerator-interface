@@ -17,6 +17,8 @@ sources:
   - src/acc_pkg.sv
   - src/acc_intf.sv
   - src/acc_interconnect.sv
+  - src/acc_adapter.sv
+  - src/acc_predecoder.sv
   - target: simulation
     files:
       - src/acc_test.sv
@@ -24,3 +26,4 @@ sources:
     files:
       - test/acc_interconnect_tb.sv
       - test/acc_cluster_interconnect_tb.sv
+      - test/acc_adapter_tb.sv

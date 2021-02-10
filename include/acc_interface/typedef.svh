@@ -4,6 +4,7 @@
 
 // Author: Noam Gallmann <gnoam@live.com>
 
+// Accelerator Interconnect Typedefs
 `ifndef ACC_INTERFACE_TYPEDEF_SVH_
 `define ACC_INTERFACE_TYPEDEF_SVH_
 
@@ -45,5 +46,34 @@
   `ACC_TYPEDEF_RSP_CHAN_T(__name``_rsp_chan_t, __data_t, __id_t )           \
   `ACC_TYPEDEF_REQ_T(__name``_req_t, __name``_req_chan_t )                  \
   `ACC_TYPEDEF_RSP_T(__name``_rsp_t,  __name``_rsp_chan_t )
+
+`endif
+
+// Accelerator Predecoder Interface Typedefs
+`ifndef ACC_PRED_TYPEDEF_SVH
+`define ACC_PRED_TYPEDEF_SVH
+
+`define PRED_TYPEDEF_REQ_T(__req_t, __req_chan_t) \
+  typedef struct packed {                         \
+    __req_chan_t q,                               \
+    logic        q_valid                          \
+  } __req_t;
+
+`define PRED_TYPEDEF_REQ_CHAN_T(__req_chan_t) \
+  typedef struct packed {                     \
+    logic [2:0] rs_valid;                     \
+  } __req_chan_t;
+
+`define PRED_TYPEDEF_RSP_T(__rsp_t, __rsp_chan_t) \
+  typedef struct packed {                         \
+    __rsp_chan_t p,                               \
+    logic        p_ready                          \
+  } __rsp_t;
+
+`define PRED_TYPEDEF_RSP_CHAN_T(__rsp_chan_t) \
+  typedef struct packed {                     \
+    logic       accept;                       \
+    logic [1:0] wb;                           \
+  } __rsp_chan_t;
 
 `endif
