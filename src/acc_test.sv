@@ -11,19 +11,16 @@ package acc_test;
   class req_t #(
     parameter int AccAddrWidth = -1,
     parameter int DataWidth    = -1,
-    parameter int IdWidth      = -1,
-    parameter int NumRsp       = -1
+    parameter int NumRsp       = -1,
+    parameter int IdWidth      = -1
   );
     rand logic [AccAddrWidth-1:0] addr;
     rand logic [DataWidth-1:0]    data_arga;
     rand logic [DataWidth-1:0]    data_argb;
     rand logic [DataWidth-1:0]    data_argc;
     rand logic [31:0]             data_op;
-    rand logic [IdWidth-1:0]      id;
-
-    constraint legal_acc_id_c {
-      id inside {[0:31]}; // MSB set by interconnect.
-    }
+    rand logic [4:0]              rd_id;
+    rand logic [IdWidth-1:0]      req_id;
 
     constraint legal_acc_addr_c {
       addr inside {[0:NumRsp-1]};
@@ -41,20 +38,23 @@ package acc_test;
       return data_arga == rhs.data_arga &
              data_argb == rhs.data_argb &
              data_argc == rhs.data_argc &
-             data_op   == rhs.data_op   &
-             id[4:0]   == rhs.id[4:0];
+             data_op   == rhs.data_o-p   &
+             rd_id     == rhs.rd_id;
+             // not testing request ID, as not set at time of sending.
+             // req_id    == rhs.req_id;
              // not testing address, as not relevant after xbar.
              // addr      == rhs.addr      &
     endfunction
 
     task display;
       $display(
-              "req.addr: %x\n"         , addr        ,
-              "req.data_op: %x\n"      , data_op     ,
-              "req.data_arga: %x\n"    , data_arga   ,
-              "req.data_argb: %x\n"    , data_argb   ,
-              "req.data_argc: %x\n"    , data_argc   ,
-              "req.id: %x\n"           , id          ,
+              "req.addr: %x\n",      addr,
+              "req.data_op: %x\n",   data_op,
+              "req.data_arga: %x\n", data_arga,
+              "req.data_argb: %x\n", data_argb,
+              "req.data_argc: %x\n", data_argc,
+              "req.rd_id: %x\n",     rd_id,
+              "req.req_id: %x\n",    req_id,
               "\n"
             );
     endtask
@@ -67,7 +67,8 @@ package acc_test;
   );
     rand logic [DataWidth-1:0] data;
     rand logic                 error;
-    logic [IdWidth-1:0]        id;
+    logic [4:0]                rd_id;
+    logic [IdWidth-1:0]        req_id;
 
     typedef rsp_t # (
       .DataWidth    ( DataWidth ),
@@ -76,16 +77,18 @@ package acc_test;
 
     // Compare objects of the same type
     function do_compare(int_rsp_t rhs);
-      return data  == rhs.data  &
-             error == rhs.error &
-             id    == rhs.id;
+      return data   == rhs.data   &
+             error  == rhs.error  &
+             req_id == rhs.req_id &
+             rd_id  == rhs.rd_id;
     endfunction
 
     task display;
       $display(
-              "rsp.data: %x\n"         , data ,
-              "rsp.error %x\n"         , error     ,
-              "rsp.id: %x\n"           , id,
+              "rsp.data: %x\n",   data,
+              "rsp.error %x\n",   error,
+              "rsp.rd_id: %x\n",  rd_id,
+              "rsp.req_id: %x\n", req_id,
               "\n"
             );
     endtask
@@ -136,17 +139,19 @@ package acc_test;
       bus.q_data_arga <= '0;
       bus.q_data_argb <= '0;
       bus.q_data_argc <= '0;
-      bus.q_id        <= '0;
+      bus.q_rd_id     <= '0;
+      bus.q_req_id    <= '0;
       bus.q_valid     <= '0;
       bus.p_ready     <= '0;
     endtask
 
     task reset_slave;
-      bus.p_data  <= '0;
-      bus.p_id    <= '0;
-      bus.p_error <= '0;
-      bus.p_valid <= '0;
-      bus.q_ready <= '0;
+      bus.p_data   <= '0;
+      bus.p_rd_id  <= '0;
+      bus.p_req_id <= '0;
+      bus.p_error  <= '0;
+      bus.p_valid  <= '0;
+      bus.q_ready  <= '0;
     endtask
 
     task cycle_start;
@@ -164,7 +169,8 @@ package acc_test;
       bus.q_data_arga <= #TA req.data_arga;
       bus.q_data_argb <= #TA req.data_argb;
       bus.q_data_argc <= #TA req.data_argc;
-      bus.q_id        <= #TA req.id;
+      bus.q_req_id    <= #TA req.req_id;
+      bus.q_rd_id     <= #TA req.rd_id;
       bus.q_valid     <= #TA 1;
       cycle_start();
       while (bus.q_ready != 1) begin cycle_end(); cycle_start(); end
@@ -174,23 +180,26 @@ package acc_test;
       bus.q_data_arga <= #TA '0;
       bus.q_data_argb <= #TA '0;
       bus.q_data_argc <= #TA '0;
-      bus.q_id        <= #TA '0;
+      bus.q_req_id    <= #TA '0;
+      bus.q_rd_id     <= #TA '0;
       bus.q_valid     <= #TA  0;
     endtask
 
     // Send a response.
     task send_rsp(input int_rsp_t rsp);
-      bus.p_data  <= #TA rsp.data;
-      bus.p_id    <= #TA rsp.id;
-      bus.p_error <= #TA rsp.error;
-      bus.p_valid <= #TA 1;
+      bus.p_data   <= #TA rsp.data;
+      bus.p_req_id <= #TA rsp.req_id;
+      bus.p_rd_id  <= #TA rsp.rd_id;
+      bus.p_error  <= #TA rsp.error;
+      bus.p_valid  <= #TA 1;
       cycle_start();
       while (bus.p_ready != 1) begin cycle_end(); cycle_start(); end
       cycle_end();
-      bus.p_data  <= #TA '0;
-      bus.p_id    <= #TA '0;
-      bus.p_error <= #TA '0;
-      bus.p_valid <= #TA 0;
+      bus.p_data   <= #TA '0;
+      bus.p_req_id <= #TA '0;
+      bus.p_rd_id  <= #TA '0;
+      bus.p_error  <= #TA '0;
+      bus.p_valid  <= #TA 0;
     endtask
 
     // Receive a request.
@@ -198,13 +207,14 @@ package acc_test;
       bus.q_ready <= #TA 1;
       cycle_start();
       while (bus.q_valid != 1) begin cycle_end(); cycle_start(); end
-      req = new;
+      req           = new;
       req.addr      = bus.q_addr;
       req.data_op   = bus.q_data_op;
       req.data_arga = bus.q_data_arga;
       req.data_argb = bus.q_data_argb;
       req.data_argc = bus.q_data_argc;
-      req.id        = bus.q_id;
+      req.req_id    = bus.q_req_id;
+      req.rd_id     = bus.q_rd_id;
       cycle_end();
       bus.q_ready <= #TA 0;
     endtask
@@ -214,10 +224,11 @@ package acc_test;
       bus.p_ready <= #TA 1;
       cycle_start();
       while (bus.p_valid != 1) begin cycle_end(); cycle_start(); end
-      rsp       = new;
-      rsp.data  = bus.p_data;
-      rsp.error = bus.p_error;
-      rsp.id    = bus.p_id;
+      rsp        = new;
+      rsp.data   = bus.p_data;
+      rsp.error  = bus.p_error;
+      rsp.req_id = bus.p_req_id;
+      rsp.rd_id  = bus.p_rd_id;
       cycle_end();
       bus.p_ready <= #TA 0;
     endtask
@@ -226,13 +237,14 @@ package acc_test;
     task mon_req (output int_req_t req);
       cycle_start();
       while (!(bus.q_valid && bus.q_ready)) begin cycle_end(); cycle_start(); end
-      req = new;
+      req           = new;
       req.addr      = bus.q_addr;
       req.data_op   = bus.q_data_op;
       req.data_arga = bus.q_data_arga;
       req.data_argb = bus.q_data_argb;
       req.data_argc = bus.q_data_argc;
-      req.id        = bus.q_id;
+      req.req_id    = bus.q_req_id;
+      req.rd_id     = bus.q_rd_id;
       cycle_end();
     endtask
 
@@ -240,10 +252,11 @@ package acc_test;
     task mon_rsp (output int_rsp_t rsp);
       cycle_start();
       while (!(bus.p_valid &&bus.p_ready)) begin cycle_end(); cycle_start(); end
-      rsp       = new;
-      rsp.data  = bus.p_data;
-      rsp.error = bus.p_error;
-      rsp.id    = bus.p_id;
+      rsp        = new;
+      rsp.data   = bus.p_data;
+      rsp.error  = bus.p_error;
+      rsp.req_id = bus.p_req_id;
+      rsp.rd_id  = bus.p_rd_id;
       cycle_end();
     endtask
 
@@ -452,7 +465,8 @@ package acc_test;
         req_mbx.get(req);
         assert(rsp.randomize());
         // send response back to requester.
-        rsp.id = req.id;
+        rsp.req_id = req.req_id;
+        rsp.rd_id  = req.rd_id;
 
         @(posedge this.drv.bus.clk_i);
         rand_wait(RSP_MIN_WAIT_CYCLES, RSP_MAX_WAIT_CYCLES);
@@ -483,13 +497,6 @@ package acc_test;
     mailbox req_mbx[NumReq];
     mailbox rsp_mbx[NumReq];
 
-    /*
-    task initialize;
-      foreach (req_mbx[ii]) req_mbx[ii] = new();
-      foreach (rsp_mbx[ii]) rsp_mbx[ii] = new();
-    endtask
-    */
-
     // Constructor.
     function new (
       virtual ACC_BUS_DV #(
@@ -510,18 +517,14 @@ package acc_test;
         forever begin
           automatic int_req_t req;
           this.drv.mon_req(req);
-          // put in req mbox corresponding to the requester
-          // $display("Slave Monitor %x\n:", this);
-          // req.display();
-          req_mbx[req.id[IdWidth-1:5]].put(req);
+          // put in req mbox corresponding to the sending requester
+          req_mbx[req.req_id].put(req);
         end
         forever begin
           automatic int_rsp_t rsp;
           this.drv.mon_rsp(rsp);
-          // put in req mbox corresponding to the requester
-          // $display("Slave Monitor %x\n:", this);
-          // rsp.display();
-          rsp_mbx[rsp.id[IdWidth-1:5]].put(rsp);
+          // put in rsp mbox corresponding to the receiving requester
+          rsp_mbx[rsp.req_id].put(rsp);
         end
       join
     endtask
@@ -548,12 +551,6 @@ package acc_test;
     mailbox req_mbx [NumRsp];
     mailbox rsp_mbx = new;
 
-    /*
-    task initialize;
-      foreach (req_mbx[ii]) req_mbx[ii] = new();
-    endtask
-    */
-
     // Constructor.
     function new (
       //$display("blubb");
@@ -574,8 +571,6 @@ package acc_test;
         forever begin
           automatic int_req_t req;
           this.drv.mon_req(req);
-          // put in req mbox corresponding to the responder
-          // $display("req.addr: %x\n req.data_arga: %x\n req.id: %x", req.addr, req.data_arga, req.id);
           req_mbx[req.addr].put(req);
         end
         forever begin

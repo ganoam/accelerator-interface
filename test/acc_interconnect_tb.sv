@@ -1,4 +1,3 @@
-
 // Copyright 2020 ETH Zurich and University of Bologna.
 // Solderpad Hardware License, Version 0.51, see LICENSE for details.
 // SPDX-License-Identifier: SHL-0.51
@@ -21,8 +20,7 @@ module acc_interconnect_tb  #(
 
   // dependent parameters
   localparam int unsigned AccAddrWidth = $clog2(NumRsp);
-  localparam int unsigned IdxWidth = cf_math_pkg::idx_width(NumReq);
-  localparam int unsigned IdWidth  = 5 + IdxWidth;
+  localparam int unsigned IdWidth = cf_math_pkg::idx_width(NumReq);
 
   typedef logic [DataWidth-1:0]    data_t;
   typedef logic [IdWidth-1:0]      id_t;

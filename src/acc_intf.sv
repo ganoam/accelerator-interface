@@ -18,116 +18,88 @@
 // For further details see docs/index.md.
 
 interface ACC_BUS #(
-  // The number of requesters.
-  // parameter int          NumRequesters = -1,
-  // The number of responders.
-  // parameter int          NumRsp = -1,
-
   // ISA bit width
   parameter int unsigned DataWidth       = 32,
-  // Accelerator Address Width
-  parameter int unsigned AccAddrWidth = 5,
-  // Id Width (5 + clog2(NumRequesters)
-  parameter int unsigned IdWidth         = 5
+  // Accelerator Address Width (clog2(NumResponders))
+  parameter int unsigned AccAddrWidth    = -1,
+  // Id Width (clog2(NumRequesters))
+  parameter int unsigned IdWidth         = -1
 );
-
-  // localparam int unsigned AccAddrWidth = $clog2(NumRsp) + 1; // +1 for sharing level.
-  // localparam int unsigned IdWidthReq      = 5;
-  // Extend ID tag on the response path.
-  // localparam int unsigned IdxWidth        = cf_math_pkg::idx_width(NumRequesters);/
-  // localparam int unsigned IdWidthResp     = 5 + IdxWidth;
-
-  typedef logic [DataWidth-1:0] data_t;
-
 
   // Request channel (Q).
   logic [AccAddrWidth-1:0]    q_addr;
   logic [31:0]                q_data_op;
-  data_t                      q_data_arga;
-  data_t                      q_data_argb;
-  data_t                      q_data_argc;
-  logic [IdWidth-1:0]         q_id;
+  logic [DataWidth-1:0]       q_data_arga;
+  logic [DataWidth-1:0]       q_data_argb;
+  logic [DataWidth-1:0]       q_data_argc;
+  logic [IdWidth-1:0]         q_req_id;
+  logic [4:0]                 q_rd_id;
   logic                       q_valid;
   logic                       q_ready;
 
   // Response Channel (P).
-  data_t                  p_data;
-  logic [IdWidth-1:0]     p_id;
+  logic [DataWidth-1:0]   p_data;
+  logic [IdWidth-1:0]     p_req_id;
+  logic [4:0]             p_rd_id;
   logic                   p_error;
   logic                   p_valid;
   logic                   p_ready;
 
   modport in (
-    input  q_addr, q_data_op, q_data_arga, q_data_argb, q_data_argc, q_id, q_valid, p_ready,
-    output q_ready, p_data, p_id, p_error, p_valid
+    input  q_addr, q_data_op, q_data_arga, q_data_argb, q_data_argc, q_req_id, q_rd_id, q_valid, p_ready,
+    output q_ready, p_data, p_req_id, p_rd_id, p_error, p_valid
   );
 
   modport out (
-    output q_addr, q_data_op, q_data_arga, q_data_argb, q_data_argc, q_id, q_valid, p_ready,
-    input  q_ready, p_data, p_id, p_error, p_valid
+    output q_addr, q_data_op, q_data_arga, q_data_argb, q_data_argc, q_req_id, q_rd_id, q_valid, p_ready,
+    input  q_ready, p_data, p_req_id, p_rd_id, p_error, p_valid
   );
-
 
 endinterface
 
 interface ACC_BUS_DV #(
-  // The number of requesters
-  // parameter int NumRequesters = -1,
-  // The number of respondrs
-  // parameter int NumRsp = -1,
-
   // ISA bit width
   parameter int unsigned DataWidth       = 32,
   // Accelerator Address Width
-  parameter int unsigned AccAddrWidth = 5,
+  parameter int unsigned AccAddrWidth    = 5,
   // Id Width (5 + clog2(NumRequesters)
   parameter int unsigned IdWidth         = 5
 ) (
   input logic clk_i
 );
 
-
-
-  // localparam int unsigned AccAddrWidth = $clog2(NumRsp) + 1; // +1 for sharing level.
-  // localparam int unsigned IdWidthReq      = 5;
-  // Extend ID tag on the response path.
-  // localparam int unsigned IdxWidth       = cf_math_pkg::idx_width(NumRequesters);
-  // localparam int unsigned IdWidthResp     = 5 + IdxWidth;
-
-  typedef logic [DataWidth-1:0] data_t;
-
-
   // Request channel (Q).
-  logic [AccAddrWidth-1:0] q_addr;
-  logic [31:0]             q_data_op;
-  data_t                   q_data_arga;
-  data_t                   q_data_argb;
-  data_t                   q_data_argc;
-  logic [IdWidth-1:0]      q_id;
-
-  logic q_valid;
-  logic q_ready;
+  logic [AccAddrWidth-1:0]    q_addr;
+  logic [31:0]                q_data_op;
+  logic [DataWidth-1:0]       q_data_arga;
+  logic [DataWidth-1:0]       q_data_argb;
+  logic [DataWidth-1:0]       q_data_argc;
+  logic [IdWidth-1:0]         q_req_id;
+  logic [4:0]                 q_rd_id;
+  logic                       q_valid;
+  logic                       q_ready;
 
   // Response Channel (P).
-  data_t                  p_data;
-  logic [IdWidth-1:0]     p_id;
+  logic [DataWidth-1:0]   p_data;
+  logic [IdWidth-1:0]     p_req_id;
+  logic [4:0]             p_rd_id;
   logic                   p_error;
   logic                   p_valid;
   logic                   p_ready;
 
   modport in (
-    input  q_addr, q_data_op, q_data_arga, q_data_argb, q_data_argc, q_id, q_valid, p_ready,
-    output q_ready, p_data, p_id, p_error, p_valid
+    input  q_addr, q_data_op, q_data_arga, q_data_argb, q_data_argc, q_req_id, q_rd_id, q_valid, p_ready,
+    output q_ready, p_data, p_req_id, p_rd_id, p_error, p_valid
   );
 
   modport out (
-    output q_addr, q_data_op, q_data_arga, q_data_argb, q_data_argc, q_id, q_valid, p_ready,
-    input  q_ready, p_data, p_id, p_error, p_valid
+    output q_addr, q_data_op, q_data_arga, q_data_argb, q_data_argc, q_req_id, q_rd_id, q_valid, p_ready,
+    input  q_ready, p_data, p_req_id, p_rd_id, p_error, p_valid
   );
 
   modport monitor (
-    input  q_addr, q_data_op, q_data_arga, q_data_argb, q_data_argc, q_id, q_valid, p_ready,
-    input  q_ready, p_data, p_id, p_error, p_valid
+    input q_addr, q_data_op, q_data_arga, q_data_argb, q_data_argc, q_req_id, q_rd_id, q_valid, p_ready,
+    input  q_ready, p_data, p_req_id, p_rd_id, p_error, p_valid
   );
 
   // pragma translate_off
@@ -137,14 +109,15 @@ interface ACC_BUS_DV #(
   assert property (@(posedge clk_i) (q_valid && !q_ready |=> $stable(q_data_arga)));
   assert property (@(posedge clk_i) (q_valid && !q_ready |=> $stable(q_data_argb)));
   assert property (@(posedge clk_i) (q_valid && !q_ready |=> $stable(q_data_argc)));
-  assert property (@(posedge clk_i) (q_valid && !q_ready |=> $stable(q_id)));
+  assert property (@(posedge clk_i) (q_valid && !q_ready |=> $stable(q_req_id)));
+  assert property (@(posedge clk_i) (q_valid && !q_ready |=> $stable(q_rd_id)));
   assert property (@(posedge clk_i) (q_valid && !q_ready |=> q_valid));
 
   assert property (@(posedge clk_i) (p_valid && !p_ready |=> $stable(p_data)));
-  assert property (@(posedge clk_i) (p_valid && !p_ready |=> $stable(p_id)));
+  assert property (@(posedge clk_i) (p_valid && !p_ready |=> $stable(p_req_id)));
+  assert property (@(posedge clk_i) (p_valid && !p_ready |=> $stable(p_rd_id)));
   assert property (@(posedge clk_i) (p_valid && !p_ready |=> $stable(p_error)));
   assert property (@(posedge clk_i) (p_valid && !p_ready |=> p_valid));
   `endif
   // pragma translate_on
-
 endinterface
