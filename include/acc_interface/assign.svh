@@ -37,18 +37,18 @@
   __opt_as dst.q``__sep_dst``data_arga = src.q``__sep_src``data_arga; \
   __opt_as dst.q``__sep_dst``data_argb = src.q``__sep_src``data_argb; \
   __opt_as dst.q``__sep_dst``data_argc = src.q``__sep_src``data_argc; \
-  __opt_as dst.q``__sep_dst``req_id    = src.q``__sep_src``req_id;    \
-  __opt_as dst.q``__sep_dst``rd_id     = src.q``__sep_src``rd_id;
-
+  __opt_as dst.q``__sep_dst``id        = src.q``__sep_src``id;
 
 `define ACC_ASSIGN_Q_ADDR(__opt_as, dst, src, __sep_dst, __sep_src) \
   __opt_as dst.q``__sep_dst``addr = src.q``__sep_src``addr;
 
+//`define ACC_ASSIGN_P_ID(__opt_as, dst, src, __sep_dst, __sep_src)   \
+  //__opt_as dst.p``__sep_dst``id= src.p``__sep_src``id;
+
 `define ACC_ASSIGN_P_CHAN(__opt_as, dst, src, __sep_dst, __sep_src) \
-  __opt_as dst.p``__sep_dst``data   = src.p``__sep_src``data;       \
-  __opt_as dst.p``__sep_dst``error  = src.p``__sep_src``error;      \
-  __opt_as dst.p``__sep_dst``req_id = src.p``__sep_src``req_id;     \
-  __opt_as dst.p``__sep_dst``rd_id  = src.p``__sep_src``rd_id;
+  __opt_as dst.p``__sep_dst``data  = src.p``__sep_src``data;        \
+  __opt_as dst.p``__sep_dst``error = src.p``__sep_src``error;       \
+  __opt_as dst.p``__sep_dst``id = src.p``__sep_src``id;
 
 `define ACC_ASSIGN(slv, mst)                 \
   `ACC_ASSIGN_Q_CHAN(assign, slv, mst, _, _) \
@@ -56,6 +56,7 @@
   `ACC_ASSIGN_HANDSHAKE(assign, slv, mst, q) \
   `ACC_ASSIGN_P_CHAN(assign, mst, slv, _, _) \
   `ACC_ASSIGN_HANDSHAKE(assign, mst, slv, p)
+  //`ACC_ASSIGN_P_ID(assign, mst, slv, _, _ )  \
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -109,6 +110,7 @@
   `ACC_ASSIGN_READY(assign, resp_struct, acc_if, q)     \
   `ACC_ASSIGN_P_CHAN(assign, resp_struct, acc_if, ., _) \
   `ACC_ASSIGN_VALID(assign, resp_struct, acc_if, p)
+  //`ACC_ASSIGN_P_ID(assign, resp_struct, acc_if, _, _) \
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 `endif

@@ -13,9 +13,9 @@
     __data_t             data_argb;                            \
     __data_t             data_argc;                            \
     logic [31:0]         data_op;                              \
-    __id_t               req_id;                               \
-    logic [4:0]          rd_id;                                \
+    __id_t               id;                                   \
   } __req_chan_t;
+
 // TODO: Addr in channel.
 `define ACC_TYPEDEF_REQ_T(__req_t, __req_chan_t, __addr_t) \
   typedef struct packed {                                  \
@@ -25,13 +25,14 @@
     logic        p_ready;                                  \
   } __req_t;
 
+
 `define ACC_TYPEDEF_RSP_CHAN_T(__rsp_chan_t, __data_t, __id_t ) \
   typedef struct packed {                                       \
-    __data_t    data;                                           \
-    logic       error;                                          \
-    __id_t      req_id;                                         \
-    logic [4:0] rd_id;                                          \
+    __data_t data;                                              \
+    logic    error;                                             \
+    __id_t   id;                                                \
   } __rsp_chan_t;
+
 
 `define ACC_TYPEDEF_RSP_T(__rsp_t, __rsp_chan_t) \
   typedef struct packed {                        \
