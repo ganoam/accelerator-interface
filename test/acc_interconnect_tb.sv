@@ -28,15 +28,13 @@ module acc_interconnect_tb  #(
   typedef acc_test::req_t # (
     .AccAddrWidth ( AccAddrWidth ),
     .DataWidth    ( DataWidth    ),
-    .IdWidth      ( InIdWidth    ),
-    .NumRsp       ( NumRsp       )
+    .IdWidth      ( InIdWidth    )
   ) tb_mst_req_t;
 
   typedef acc_test::req_t # (
     .AccAddrWidth ( AccAddrWidth ),
     .DataWidth    ( DataWidth    ),
-    .IdWidth      ( ExtIdWidth   ),
-    .NumRsp       ( NumRsp       )
+    .IdWidth      ( ExtIdWidth   )
   ) tb_slv_req_t;
 
   typedef acc_test::rsp_t # (

@@ -8,13 +8,10 @@ package acc_test;
 
   import acc_pkg::*;
 
-  // TODO: NumResp dependency outside: with constraint, und definiere
-  // constraint draussen.
   class req_t #(
     parameter int AccAddrWidth = -1,
     parameter int DataWidth    = -1,
-    parameter int IdWidth      = -1,
-    parameter int NumRsp       = -1
+    parameter int IdWidth      = -1
   );
     rand logic [AccAddrWidth-1:0] addr;
     rand logic [DataWidth-1:0]    data_arga;
@@ -23,19 +20,10 @@ package acc_test;
     rand logic [31:0]             data_op;
     rand logic [IdWidth-1:0]      id;
 
-    constraint legal_acc_id_c {
-      id inside {[0:31]}; // MSB set by interconnect.
-    }
-
-    constraint legal_acc_addr_c {
-      addr inside {[0:NumRsp-1]};
-    }
-
     typedef req_t # (
       .AccAddrWidth ( AccAddrWidth ),
       .DataWidth    ( DataWidth    ),
-      .IdWidth      ( IdWidth      ),
-      .NumRsp       ( NumRsp       )
+      .IdWidth      ( IdWidth      )
     ) int_req_t;
 
     // Compare objects of the same type
@@ -125,8 +113,7 @@ package acc_test;
     typedef req_t # (
       .AccAddrWidth ( AccAddrWidth ),
       .DataWidth    ( DataWidth    ),
-      .IdWidth      ( InIdWidth    ),
-      .NumRsp       ( NumRsp       )
+      .IdWidth      ( InIdWidth    )
     ) int_req_t;
 
     typedef rsp_t # (
@@ -288,8 +275,7 @@ package acc_test;
     typedef req_t #(
       .AccAddrWidth ( AccAddrWidth ),
       .DataWidth    ( DataWidth    ),
-      .IdWidth      ( InIdWidth    ),
-      .NumRsp       ( NumRsp       )
+      .IdWidth      ( InIdWidth    )
     ) int_req_t;
 
     typedef rsp_t #(
@@ -392,13 +378,17 @@ package acc_test;
 
     // Send random requests.
     task send_requests (input int n);
-      automatic int_req_t r = new;
+      automatic int_req_t req = new;
 
       repeat (n) begin
         this.cnt++;
-        assert(r.randomize());
+        assert(req.randomize with
+          {
+            addr inside {[0:NumRsp-1]};
+          }
+        );
         rand_wait(REQ_MIN_WAIT_CYCLES, REQ_MAX_WAIT_CYCLES);
-        this.drv.send_req(r);
+        this.drv.send_req(req);
       end
       this.req_done = 1;
     endtask
