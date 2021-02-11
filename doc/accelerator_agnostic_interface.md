@@ -11,38 +11,43 @@ The documentation provides *preliminary* information.
 The specification of this part of the interface is currently under development.
 To take part in the discussion, please refer to the corresponding [issue](https://github.com/ganoam/accelerator-interface/issues/1).
 
-## Accelerator Pre-Decoder
-The accelerator pre-decoder is a hardware extension to the instruction decoder of the offloading core.
-It is a modular structure, implementing an array of dedicated subdecoders representing each of the connected accelerators.
-Additionally, it implemments an immediate decoder, operand multiplexers and capability for communication with the offloading core and the accelerator interconnect.
+## Accelerator Adapter
+The accelerator adapter is a hardware extension to the instruction decoder of the offloading core.
+It is a modular structure, implementing an array of dedicated predecoders representing each of the connected accelerators.
+The predecoders are connected in parallel to the decoder in the offloading core and are understood as an architectural extension of the decoding stage.
+Analogously an array of compressed predecoders is implemented to expand eventual compressed offload instructions.
+Furthermore, the accelerator adapter implemments an immediate decoder, operand multiplexers and capability for communication with the offloading core and the accelerator interconnect.
 
 ![Accelerator Agnostic Core](img/acc-agnostic-core.svg)
 
-###  Pre-Decoder Interface Signals
+###  Offload Request Interface Signals
 
 The pre-decoder communicates to the offloading core via the the following signals.
 
-| Name                | Range           | Dicection           | Description                                      |
-| ------------------- | --------------- | ------------------- | ------------------------------------------------ |
-| `offload_valid`     | `0:0`           | Core -> Pre-Decoder | Initiate offloading process.                     |
-| `offload_ready`     | `0:0`           | Pre-Decoder -> Core | All information accquired. Complete transaction. |
-| `offload_rs_valid`  | `2:0`           | Core -> Pre-Decoder | Source register `i` is valid                     |
-| `offload_accept`    | `0:0`           | Pre-Decoder -> Core | Instruction accepted by external accelerator.    |
-| `offload_wb`        | `1:0`           | Pre-Decoder -> Core | Expect writeback on registers `{rd_address, rd_address+1}`).         |
+| Name                | Range           | Dicection           | Description                                                  |
+| ------------------- | --------------- | ------------------- | ------------------------------------------------------------ |
+| `offload_valid`     | `0:0`           | Core -> Adapter     | Initiate offloading process.                                 |
+| `offload_ready`     | `0:0`           | Adapter     -> Core | All information accquired. Complete transaction.             |
+| `offload_accept`    | `0:0`           | Adapter     -> Core | Instruction accepted by external accelerator.                |
+| `offload_wb`        | `1:0`           | Adapter     -> Core | Expect writeback on registers `{rd_address, rd_address+1}`). |
 
-The following signals are permanently exposed to the pre-decoder.
+The following signals are non-handshaked architecture extension signals.
 | Name                | Range           | Dicection           | Description                                      |
 | ------------------- | --------------- | ------------------- | ------------------------------------------------ |
-| `rs1`, `rs2`, `rs3` | `DataWidth-1:0` | Core-> Pre-Decoder  | Source register contents.                        |
-| `instr_rdata`       | `31:0`          | Core-> Pre-Decoder  | RISC-V Instruction Data                          |
+| `rs1`, `rs2`, `rs3` | `DataWidth-1:0` | Core -> Adapter     | Source register contents.                        |
+| `rs_valid`          | `2:0`           | Core -> Adapter     | Source register `i` is valid                     |
+| `instr_rdata_id`    | `31:0`          | Core -> Adapter     | RISC-V instruction data (ID Stage)               |
+| `instr_rdata_if`    | `31:0`          | Core -> Adapter     | RISC-V instruction data (IF Stage)               |
+| `instr_if_exp`      | `31:0`          | Adapter -> Core     | Expanded compressed instruction data             |
+| `instr_if_exp_valid`| `0:0`           | Adapter -> Core     | Expanded compressed Instruction data is valid    |
 
 Remarks:
 - The transaction is initiated by the core using `offload_valid` and terminated by the pre-decoder using `offload_ready`.
   The offloading core must stall, until a transaction is resolved (single-cycle transactions are permitted).
 - Source register data in the offloading core may be invalid for several reasons.
   For example, the source register address may be reserved be an outstanding writebac from another offloaded instruction.
-  The status of each source register is indicated by the individual bits of `offload_rs_valid`.
-  `offload_rs_valid` may change during the course of a transaction (e.g. writeback has occured).
+  The status of each source register is indicated by the individual bits of `rs__valid`.
+  `rs__valid` may change during the course of a transaction (e.g. writeback has occured).
   If an instruction is to be offloaded which depends on a source register marked as invalid, the pre-decoder may not complete the transaction until it is validated.
 - `offload_accept` indicates the instruction is a accepeted by one of the connected accelerators.
   If a transaction is completed without asserting `offload_accept`, the core must raise an illegal instruction exception.
@@ -66,7 +71,7 @@ The sequence for offloading instructions to external accelerators is as follows
 - The signal `offload_rs_valid` indicates to the pre-decoder which of the exposed source register data is currently valid.
   The pre-decoder may stall the offloading core by delaying the `offload_ready` signal while waiting for valid source registers.
   For instructions not using source registers, the corresponding valid signal is to be ignored by the pre-decoder.
-- Once all necessary operands are valid (determined by `offl_ops_sel` generated by the accepting subdecoder and `offload_rs_valid` originating from the offloading core) the core handshaker module completes the transaction by raising `offload_ready`.
+- Once all necessary operands are valid (determined by `offl_ops_sel` generated by the accepting subdecoder and `rs__valid` originating from the offloading core) the core handshaker module completes the transaction by raising `offload_ready`.
 - If no accelerator indicates acceptance of the offload request, the transaction is completed with `offload_accept` low, indicating the core has encountered an illegal instruction.
 - The accelerator interconnect handshaker is in charge of communication with the accelerator interconnect as defined in the [base specification](index.md).
 
