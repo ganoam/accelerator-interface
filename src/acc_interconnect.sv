@@ -4,6 +4,8 @@
 
 // Noam Gallmann <gnoam@live.com>
 
+`include "acc_interface/assign.svh"
+
 module acc_interconnect #(
   // The number of requesters.
   parameter int NumReq             = -1,
@@ -80,16 +82,9 @@ module acc_interconnect #(
     assign mst_req_p_ready[i] = mst_req_i[i].p_ready;
   end
 
-  // TODO: unpacking macro??
   for (genvar i=0; i<NumRsp; i++) begin : gen_slv_req_assignment
     // Assign payload signals
-    assign slv_req_o[i].q.data_arga = slv_req_q_chan[i].data_arga;
-    assign slv_req_o[i].q.data_argb = slv_req_q_chan[i].data_argb;
-    assign slv_req_o[i].q.data_argc = slv_req_q_chan[i].data_argc;
-    assign slv_req_o[i].q.data_op   = slv_req_q_chan[i].data_op;
-    // Set upper bits of id field.
-    assign slv_req_o[i].q.id        = {sender_id[i], slv_req_q_chan[i].id};
-    assign slv_req_o[i].q.addr      = slv_req_q_chan[i].addr;
+    `ACC_ASSIGN_Q_SIGNALS(assign, slv_req_o[i].q, slv_req_q_chan[i], "id", {sender_id[i], slv_req_q_chan[i].id})
     assign slv_req_o[i].q_valid     = slv_req_q_valid[i];
     assign slv_req_o[i].p_ready     = slv_req_p_ready[i];
   end

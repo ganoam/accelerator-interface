@@ -51,6 +51,20 @@
   `ACC_ASSIGN_P_CHAN(assign, mst, slv, _, _) \
   `ACC_ASSIGN_HANDSHAKE(assign, mst, slv, p)
 
+  // Assign Q_channel signals with override.
+`define ACC_ASSIGN_Q_SIGNALS(__opt_as, dst, src,  ovr_name="none", ovr_sig='0)    \
+  __opt_as dst.addr      = ``ovr_name`` == "addr" ? ovr_sig : src.addr;           \
+  __opt_as dst.data_op   = ``ovr_name`` == "data_op" ? ovr_sig : src.data_op;     \
+  __opt_as dst.data_arga = ``ovr_name`` == "data_arga" ? ovr_sig : src.data_arga; \
+  __opt_as dst.data_argb = ``ovr_name`` == "data_argb" ? ovr_sig : src.data_argb; \
+  __opt_as dst.data_argc = ``ovr_name`` == "data_argc" ? ovr_sig : src.data_argc; \
+  __opt_as dst.id        = ``ovr_name`` == "id" ? ovr_sig : src.id;
+
+  // Assign P_channel signals with override.
+`define ACC_ASSIGN_P_SIGNALS(__opt_as, dst, src,  ovr_name="none", ovr_sig='0) \
+  __opt_as dst.data      = ``ovr_name`` == "data" ? ovr_sig : src.data;        \
+  __opt_as dst.error     = ``ovr_name`` == "error" ? ovr_sig : src.error;      \
+  __opt_as dst.id        = ``ovr_name`` == "id" ? ovr_sig : src.id;
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
