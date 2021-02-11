@@ -70,7 +70,7 @@ module acc_interconnect #(
 
   for (genvar i=0; i<NumReq; i++) begin : gen_mst_req_assignment
     assign mst_req_q_chan[i]  = mst_req_i[i].q;
-    assign mst_req_q_addr[i]  = mst_req_i[i].q_addr;
+    assign mst_req_q_addr[i]  = mst_req_i[i].q.addr;
     assign mst_req_q_valid[i] = mst_req_i[i].q_valid;
     assign mst_req_p_ready[i] = mst_req_i[i].p_ready;
   end

@@ -33,17 +33,12 @@
 // Usage Example: `ACC_ASSIGN(slv, mst) `ACC_ASSIGN_Q(dst, src, aw)
 // `ACC_ASSIGN_P(dst, src)
 `define ACC_ASSIGN_Q_CHAN(__opt_as, dst, src, __sep_dst, __sep_src)   \
+  __opt_as dst.q``__sep_dst``addr      = src.q``__sep_src``addr;      \
   __opt_as dst.q``__sep_dst``data_op   = src.q``__sep_src``data_op;   \
   __opt_as dst.q``__sep_dst``data_arga = src.q``__sep_src``data_arga; \
   __opt_as dst.q``__sep_dst``data_argb = src.q``__sep_src``data_argb; \
   __opt_as dst.q``__sep_dst``data_argc = src.q``__sep_src``data_argc; \
   __opt_as dst.q``__sep_dst``id        = src.q``__sep_src``id;
-
-`define ACC_ASSIGN_Q_ADDR(__opt_as, dst, src, __sep_dst, __sep_src) \
-  __opt_as dst.q``__sep_dst``addr = src.q``__sep_src``addr;
-
-//`define ACC_ASSIGN_P_ID(__opt_as, dst, src, __sep_dst, __sep_src)   \
-  //__opt_as dst.p``__sep_dst``id= src.p``__sep_src``id;
 
 `define ACC_ASSIGN_P_CHAN(__opt_as, dst, src, __sep_dst, __sep_src) \
   __opt_as dst.p``__sep_dst``data  = src.p``__sep_src``data;        \
@@ -52,11 +47,9 @@
 
 `define ACC_ASSIGN(slv, mst)                 \
   `ACC_ASSIGN_Q_CHAN(assign, slv, mst, _, _) \
-  `ACC_ASSIGN_Q_ADDR(assign, slv, mst, _, _) \
   `ACC_ASSIGN_HANDSHAKE(assign, slv, mst, q) \
   `ACC_ASSIGN_P_CHAN(assign, mst, slv, _, _) \
   `ACC_ASSIGN_HANDSHAKE(assign, mst, slv, p)
-  //`ACC_ASSIGN_P_ID(assign, mst, slv, _, _ )  \
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -76,14 +69,12 @@
 `define ACC_ASSIGN_FROM_REQ(acc_if, req_struct)        \
   `ACC_ASSIGN_VALID(assign, acc_if, req_struct, q)     \
   `ACC_ASSIGN_Q_CHAN(assign, acc_if, req_struct, _, .) \
-  `ACC_ASSIGN_Q_ADDR(assign, acc_if, req_struct, _, _) \
   `ACC_ASSIGN_READY(assign, acc_if, req_struct, p)
 
 `define ACC_ASSIGN_FROM_RESP(acc_if, resp_struct)       \
   `ACC_ASSIGN_READY(assign, acc_if, resp_struct, q)     \
   `ACC_ASSIGN_P_CHAN(assign, acc_if, resp_struct, _, .) \
   `ACC_ASSIGN_VALID(assign, acc_if, resp_struct, p)
-  //`ACC_ASSIGN_P_ID(assign, acc_if, resp_struct, _, _)   \
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -103,14 +94,13 @@
 `define ACC_ASSIGN_TO_REQ(req_struct, acc_if)          \
   `ACC_ASSIGN_VALID(assign, req_struct, acc_if, q)     \
   `ACC_ASSIGN_Q_CHAN(assign, req_struct, acc_if, ., _) \
-  `ACC_ASSIGN_Q_ADDR(assign, req_struct, acc_if, _, _) \
   `ACC_ASSIGN_READY(assign, req_struct, acc_if, p)
 
 `define ACC_ASSIGN_TO_RESP(resp_struct, acc_if)         \
   `ACC_ASSIGN_READY(assign, resp_struct, acc_if, q)     \
   `ACC_ASSIGN_P_CHAN(assign, resp_struct, acc_if, ., _) \
   `ACC_ASSIGN_VALID(assign, resp_struct, acc_if, p)
-  //`ACC_ASSIGN_P_ID(assign, resp_struct, acc_if, _, _) \
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 `endif
