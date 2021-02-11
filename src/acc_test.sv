@@ -322,9 +322,8 @@ package acc_test;
 
   endclass
 
-// Generate random requests as a master device.
+  // Generate random requests as a master device.
   class rand_acc_master #(
-    // TODO: send out multiple requests at time.
     // Acc interface parameters
     parameter int DataWidth    = -1,
     parameter int AccAddrWidth = -1,
@@ -407,13 +406,13 @@ package acc_test;
   endclass
 
   class rand_acc_slave #(
-    // TODO: Accept multiple requests at the time
-    // TODO: enforce ordering per id.
     // Acc interface parameters
     parameter int AccAddrWidth = -1,
     parameter int DataWidth    = -1,
-    parameter int IdWidth      = -1,
+    parameter int ExtIdWidth   = -1,
+    parameter int InIdWidth    = -1,
     parameter int NumRsp       = -1,
+    parameter int NumReq       = -1,
     // Stimuli application and test time
     parameter time  TA = 0ps,
     parameter time  TT = 0ps,
@@ -425,15 +424,15 @@ package acc_test;
       // Acc interface parameters
       .AccAddrWidth ( AccAddrWidth ),
       .DataWidth    ( DataWidth    ),
-      .InIdWidth    ( IdWidth      ),
-      .ExtIdWidth   ( IdWidth      ),
+      .InIdWidth    ( ExtIdWidth   ),
+      .ExtIdWidth   ( ExtIdWidth   ),
       .NumRsp       ( NumRsp       ),
       // Stimuli application and test time
       .TA(TA),
       .TT(TT)
     );
 
-    mailbox req_mbx = new();
+    mailbox req_mbx[NumReq];
 
     /// Reset the driver.
     task reset();
@@ -452,10 +451,11 @@ package acc_test;
       virtual ACC_BUS_DV #(
         .DataWidth    ( DataWidth    ),
         .AccAddrWidth ( AccAddrWidth ),
-        .InIdWidth    ( IdWidth      ),
-        .ExtIdWidth   ( IdWidth      )
+        .InIdWidth    ( ExtIdWidth   ),
+        .ExtIdWidth   ( ExtIdWidth   )
       ) bus);
       super.new(bus);
+      foreach(this.req_mbx[ii]) req_mbx[ii] = new();
     endfunction
 
     task recv_requests();
@@ -463,7 +463,7 @@ package acc_test;
         automatic int_req_t req;
         rand_wait(REQ_MIN_WAIT_CYCLES, REQ_MAX_WAIT_CYCLES);
         this.drv.recv_req(req);
-        req_mbx.put(req);
+        req_mbx[req.id[ExtIdWidth-1:InIdWidth]].put(req);
       end
     endtask
 
@@ -471,14 +471,33 @@ package acc_test;
       forever begin
         automatic int_rsp_t rsp = new;
         automatic int_req_t req;
-        req_mbx.get(req);
-        assert(rsp.randomize());
-        // send response back to requester.
-        rsp.id = req.id;
+        // generate random sequence of requesters.
+        automatic int req_id[NumReq];
+        automatic bit req_found = 1'b0;
+        for (int i =0; i<NumReq; i++) begin
+          req_id[i] = i;
+        end
+        req_id.shuffle();
+        // Try to respond to first requester. If mbx is empty, try next.
+        for (int i=0; i<NumReq; i++) begin
+          automatic int r_id = req_id[i];
+          if (req_mbx[r_id].num() != 0) begin
+            req_mbx[r_id].get(req);
+            req_found = 1'b1;
+            break;
+          end
+        end
+        if (req_found==1'b1) begin
+          assert(rsp.randomize());
+          rsp.id = req.id;
 
-        @(posedge this.drv.bus.clk_i);
-        rand_wait(RSP_MIN_WAIT_CYCLES, RSP_MAX_WAIT_CYCLES);
-        this.drv.send_rsp(rsp);
+          // send response back to requester.
+          @(posedge this.drv.bus.clk_i);
+          rand_wait(RSP_MIN_WAIT_CYCLES, RSP_MAX_WAIT_CYCLES);
+          this.drv.send_rsp(rsp);
+        end else begin
+          this.drv.cycle_end();
+        end
       end
     endtask
   endclass

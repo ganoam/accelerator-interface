@@ -157,8 +157,10 @@ module acc_interconnect_tb  #(
     // Acc bus interface paramaters;
     .DataWidth    ( DataWidth    ),
     .AccAddrWidth ( AccAddrWidth ),
-    .IdWidth      ( ExtIdWidth   ),
+    .ExtIdWidth   ( ExtIdWidth   ),
+    .InIdWidth    ( InIdWidth    ),
     .NumRsp       ( NumRsp       ),
+    .NumReq       ( NumReq       ),
     // Stimuli application and test time
     .TA ( ApplTime ),
     .TT ( TestTime )
