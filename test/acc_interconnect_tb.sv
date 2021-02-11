@@ -13,6 +13,7 @@ module acc_interconnect_tb  #(
   parameter int unsigned NumReq       = 8,
   parameter int unsigned NumRsp       = 5,
   parameter int unsigned DataWidth    = 32,
+  parameter int unsigned InIdWidth    = 5,
   parameter bit          RegisterReq  = 0,
   parameter bit          RegisterRsp  = 0,
   // TB params
@@ -22,25 +23,25 @@ module acc_interconnect_tb  #(
   // dependent parameters
   localparam int unsigned AccAddrWidth = $clog2(NumRsp);
   localparam int unsigned IdxWidth = cf_math_pkg::idx_width(NumReq);
-  localparam int unsigned IdWidth  = 5 + IdxWidth;
-
-  typedef logic [DataWidth-1:0]    data_t;
-  typedef logic [IdWidth-1:0]      id_t;
-  typedef logic [AccAddrWidth-1:0] addr_t;
-
-  `ACC_TYPEDEF_ALL(acc, addr_t, data_t, id_t)
+  localparam int unsigned ExtIdWidth  = InIdWidth + IdxWidth;
 
   typedef acc_test::req_t # (
     .AccAddrWidth ( AccAddrWidth ),
     .DataWidth    ( DataWidth    ),
-    .IdWidth      ( IdWidth      ),
+    .IdWidth      ( InIdWidth    ),
     .NumRsp       ( NumRsp       )
-  ) tb_req_t;
+  ) tb_mst_req_t;
 
+  typedef acc_test::req_t # (
+    .AccAddrWidth ( AccAddrWidth ),
+    .DataWidth    ( DataWidth    ),
+    .IdWidth      ( ExtIdWidth   ),
+    .NumRsp       ( NumRsp       )
+  ) tb_slv_req_t;
 
   typedef acc_test::rsp_t # (
     .DataWidth    ( DataWidth ),
-    .IdWidth      ( IdWidth   )
+    .IdWidth      ( ExtIdWidth   )
   ) tb_rsp_t;
 
   // Timing params
@@ -51,28 +52,32 @@ module acc_interconnect_tb  #(
   logic clk, rst_n;
 
   ACC_BUS #(
-    .AccAddrWidth(AccAddrWidth),
-    .DataWidth(DataWidth),
-    .IdWidth(IdWidth)
+    .AccAddrWidth ( AccAddrWidth ),
+    .DataWidth    ( DataWidth    ),
+    .InIdWidth    ( InIdWidth    ),
+    .ExtIdWidth   ( ExtIdWidth   )
   ) master [NumReq] ();
 
   ACC_BUS_DV #(
-    .AccAddrWidth(AccAddrWidth),
-    .DataWidth(DataWidth),
-    .IdWidth(IdWidth)
+    .AccAddrWidth ( AccAddrWidth ),
+    .DataWidth    ( DataWidth    ),
+    .InIdWidth    ( InIdWidth    ),
+    .ExtIdWidth   ( ExtIdWidth   )
   ) master_dv [NumReq] (clk);
 
 
   ACC_BUS #(
-    .AccAddrWidth(AccAddrWidth),
-    .DataWidth(DataWidth),
-    .IdWidth(IdWidth)
+    .AccAddrWidth ( AccAddrWidth ),
+    .DataWidth    ( DataWidth    ),
+    .InIdWidth    ( ExtIdWidth   ),
+    .ExtIdWidth   ( ExtIdWidth   )
   ) slave [NumRsp] ();
 
   ACC_BUS_DV #(
-    .AccAddrWidth(AccAddrWidth),
-    .DataWidth(DataWidth),
-    .IdWidth(IdWidth)
+    .AccAddrWidth ( AccAddrWidth ),
+    .DataWidth    ( DataWidth    ),
+    .InIdWidth    ( ExtIdWidth   ),
+    .ExtIdWidth   ( ExtIdWidth   )
   ) slave_dv [NumRsp] (clk);
 
 
@@ -107,7 +112,8 @@ module acc_interconnect_tb  #(
     // Acc bus interface paramaters;
     .DataWidth    ( DataWidth        ),
     .AccAddrWidth ( AccAddrWidth     ),
-    .IdWidth      ( IdWidth ),
+    .InIdWidth    ( InIdWidth       ),
+    .ExtIdWidth   ( ExtIdWidth       ),
     .NumRsp       ( NumRsp           ),
     .NumReq       ( NumReq           ),
     // Stimuli application and test time
@@ -119,16 +125,13 @@ module acc_interconnect_tb  #(
     // Acc bus interface paramaters;
     .DataWidth    ( DataWidth    ),
     .AccAddrWidth ( AccAddrWidth ),
-    .IdWidth      ( IdWidth      ),
+    .InIdWidth    ( InIdWidth    ),
+    .ExtIdWidth   ( ExtIdWidth   ),
     .NumRsp       ( NumRsp       ),
     // Stimuli application and test time
     .TA ( ApplTime ),
     .TT ( TestTime )
   ) acc_mst_monitor_t;
-
-  // initial begin
-    // $monitor("rst_n: %x", rst_n);
-  // end
 
   acc_mst_monitor_t acc_mst_monitor [NumReq];
   for (genvar i=0; i<NumReq; i++) begin : gen_mst_mon
@@ -156,7 +159,7 @@ module acc_interconnect_tb  #(
     // Acc bus interface paramaters;
     .DataWidth    ( DataWidth    ),
     .AccAddrWidth ( AccAddrWidth ),
-    .IdWidth      ( IdWidth      ),
+    .IdWidth      ( ExtIdWidth   ),
     .NumRsp       ( NumRsp       ),
     // Stimuli application and test time
     .TA ( ApplTime ),
@@ -177,7 +180,8 @@ module acc_interconnect_tb  #(
     // Acc bus interface paramaters;
     .DataWidth    ( DataWidth        ),
     .AccAddrWidth ( AccAddrWidth     ),
-    .IdWidth      ( IdWidth          ),
+    .InIdWidth    ( InIdWidth        ),
+    .ExtIdWidth   ( ExtIdWidth       ),
     .NumRsp       ( NumRsp           ),
     // Stimuli application and test time
     .TA ( ApplTime ),
@@ -194,6 +198,15 @@ module acc_interconnect_tb  #(
       rand_acc_master[i].run(NrRandomTransactions);
     end
   end
+
+  // Compare reqs of different parameterizations
+  let mstslv_reqcompare(req_mst, req_slv) =
+    acc_test::compare_req#(
+      .mst_req_t ( tb_mst_req_t ),
+      .slv_req_t ( tb_slv_req_t ),
+      .IdWidth   ( InIdWidth    )
+    )::do_compare(req_mst, req_slv);
+
 
   // ----------
   // Scoreboard
@@ -219,14 +232,14 @@ module acc_interconnect_tb  #(
           fork
             automatic int i=ii;
             forever begin : check_req_path
-              automatic tb_req_t req_mst;
-              automatic tb_req_t req_slv;
-              automatic tb_req_t req_slv_all[NumReq];
+              automatic tb_mst_req_t req_mst;
+              automatic tb_slv_req_t req_slv;
+              automatic tb_slv_req_t req_slv_all[NumReq];
               // Master k has sent request to slave i.
               // Check that slave i has received.
               acc_slv_monitor[i].req_mbx[k].get(req_slv);
               acc_mst_monitor[k].req_mbx[i].get(req_mst);
-              assert(req_slv.do_compare(req_mst)) else begin
+              assert(mstslv_reqcompare(req_mst, req_slv)) else begin
                 $error("Request Mismatch");
                 $display("----------------------------------------");
                 $display("Time: %0t, Slave %x received:", $time, i);
@@ -311,10 +324,7 @@ module acc_interconnect_tb  #(
     .NumRsp       ( NumRsp         ),
     .AccAddrWidth ( AccAddrWidth   ),
     .DataWidth    ( DataWidth      ),
-    .req_t        ( acc_req_t      ),
-    .req_chan_t   ( acc_req_chan_t ),
-    .rsp_t        ( acc_rsp_t      ),
-    .rsp_chan_t   ( acc_rsp_chan_t ),
+    .InIdWidth    ( InIdWidth      ),
     .RegisterReq  ( RegisterReq    ),
     .RegisterRsp  ( RegisterRsp    )
   ) dut (

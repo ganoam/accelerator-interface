@@ -18,41 +18,38 @@
 // For further details see docs/index.md.
 
 interface ACC_BUS #(
-  // The number of requesters.
-  // parameter int          NumRequesters = -1,
-  // The number of responders.
-  // parameter int          NumRsp = -1,
-
   // ISA bit width
   parameter int unsigned DataWidth       = 32,
   // Accelerator Address Width
-  parameter int unsigned AccAddrWidth = 5,
-  // Id Width (5 + clog2(NumRequesters)
-  parameter int unsigned IdWidth         = 5
+  parameter int          AccAddrWidth    = -1,
+  // The ID width on the master side comes at two different sizes:
+  // req.id[InIdWidth-1:0] is extended accross the interconnect to
+  // rsp.id[InIdWidth+clog2(NumReq)-1:0] (ExtIdWidth)
+  // For slave side interaces set InIdWidth = ExtIdWidth
+  // Input ID Width
+  parameter int          InIdWidth       = -1,
+  // Extended ID Width
+  parameter int          ExtIdWidth      = -1
 );
 
-  // localparam int unsigned AccAddrWidth = $clog2(NumRsp) + 1; // +1 for sharing level.
-  // localparam int unsigned IdWidthReq      = 5;
-  // Extend ID tag on the response path.
-  // localparam int unsigned IdxWidth        = cf_math_pkg::idx_width(NumRequesters);/
-  // localparam int unsigned IdWidthResp     = 5 + IdxWidth;
-
-  typedef logic [DataWidth-1:0] data_t;
-
+  typedef logic [DataWidth-1:0]    data_t;
+  typedef logic [AccAddrWidth-1:0] addr_t;
+  typedef logic [ExtIdWidth-1:0]   ext_id_t;
+  typedef logic [InIdWidth-1:0]    in_id_t;
 
   // Request channel (Q).
-  logic [AccAddrWidth-1:0]    q_addr;
+  addr_t                      q_addr;
   logic [31:0]                q_data_op;
   data_t                      q_data_arga;
   data_t                      q_data_argb;
   data_t                      q_data_argc;
-  logic [IdWidth-1:0]         q_id;
+  in_id_t                        q_id;
   logic                       q_valid;
   logic                       q_ready;
 
   // Response Channel (P).
   data_t                  p_data;
-  logic [IdWidth-1:0]     p_id;
+  ext_id_t                p_id;
   logic                   p_error;
   logic                   p_valid;
   logic                   p_ready;
@@ -71,49 +68,43 @@ interface ACC_BUS #(
 endinterface
 
 interface ACC_BUS_DV #(
-  // The number of requesters
-  // parameter int NumRequesters = -1,
-  // The number of respondrs
-  // parameter int NumRsp = -1,
-
   // ISA bit width
   parameter int unsigned DataWidth       = 32,
   // Accelerator Address Width
-  parameter int unsigned AccAddrWidth = 5,
-  // Id Width (5 + clog2(NumRequesters)
-  parameter int unsigned IdWidth         = 5
+  parameter int          AccAddrWidth    = -1,
+  // The ID width on the master side comes at two different sizes:
+  // req.id[InIdWidth-1:0] is extended accross the interconnect to
+  // rsp.id[InIdWidth+clog2(NumReq)-1:0] (ExtIdWidth)
+  // For slave side interaces set InIdWidth = ExtIdWidth
+  // Input ID Width
+  parameter int          InIdWidth       = -1,
+  // Extended ID Width
+  parameter int          ExtIdWidth      = -1
 ) (
   input logic clk_i
 );
 
-
-
-  // localparam int unsigned AccAddrWidth = $clog2(NumRsp) + 1; // +1 for sharing level.
-  // localparam int unsigned IdWidthReq      = 5;
-  // Extend ID tag on the response path.
-  // localparam int unsigned IdxWidth       = cf_math_pkg::idx_width(NumRequesters);
-  // localparam int unsigned IdWidthResp     = 5 + IdxWidth;
-
-  typedef logic [DataWidth-1:0] data_t;
-
+  typedef logic [DataWidth-1:0]    data_t;
+  typedef logic [AccAddrWidth-1:0] addr_t;
+  typedef logic [ExtIdWidth-1:0]   ext_id_t;
+  typedef logic [InIdWidth-1:0]    in_id_t;
 
   // Request channel (Q).
-  logic [AccAddrWidth-1:0] q_addr;
-  logic [31:0]             q_data_op;
-  data_t                   q_data_arga;
-  data_t                   q_data_argb;
-  data_t                   q_data_argc;
-  logic [IdWidth-1:0]      q_id;
-
-  logic q_valid;
-  logic q_ready;
+  addr_t       q_addr;
+  logic [31:0] q_data_op;
+  data_t       q_data_arga;
+  data_t       q_data_argb;
+  data_t       q_data_argc;
+  in_id_t      q_id;
+  logic        q_valid;
+  logic        q_ready;
 
   // Response Channel (P).
-  data_t                  p_data;
-  logic [IdWidth-1:0]     p_id;
-  logic                   p_error;
-  logic                   p_valid;
-  logic                   p_ready;
+  data_t   p_data;
+  ext_id_t p_id;
+  logic    p_error;
+  logic    p_valid;
+  logic    p_ready;
 
   modport in (
     input  q_addr, q_data_op, q_data_arga, q_data_argb, q_data_argc, q_id, q_valid, p_ready,

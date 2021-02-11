@@ -40,28 +40,46 @@ package acc_test;
 
     // Compare objects of the same type
     function do_compare(int_req_t rhs);
-      return data_arga == rhs.data_arga &
+      return addr      == rhs.addr      &
+             data_arga == rhs.data_arga &
              data_argb == rhs.data_argb &
              data_argc == rhs.data_argc &
              data_op   == rhs.data_op   &
-             id[4:0]   == rhs.id[4:0];
-             // not testing address, as not relevant after xbar.
-             // addr      == rhs.addr      &
+             id        == rhs.id;
     endfunction
 
     task display;
       $display(
-              "req.addr: %x\n"         , addr        ,
-              "req.data_op: %x\n"      , data_op     ,
-              "req.data_arga: %x\n"    , data_arga   ,
-              "req.data_argb: %x\n"    , data_argb   ,
-              "req.data_argc: %x\n"    , data_argc   ,
-              "req.id: %x\n"           , id          ,
+              "req.addr: %x\n",       addr,
+              "req.data_op: %x\n",    data_op,
+              "req.data_arga: %x\n",  data_arga,
+              "req.data_argb: %x\n",  data_argb,
+              "req.data_argc: %x\n",  data_argc,
+              "req.id: %x\n",         id,
               "\n"
             );
     endtask
+  endclass
+
+  // Compare reqs of different parameterizations.
+  // Within an interconnect, requests may only differ only by IdWidh
+  class compare_req #(
+    parameter type mst_req_t = logic,
+    parameter type slv_req_t = logic,
+    parameter int IdWidth    = -1
+  );
+    static function do_compare(mst_req_t mst_req, slv_req_t slv_req);
+      return mst_req.addr            == slv_req.addr      &
+             mst_req.data_arga       == slv_req.data_arga &
+             mst_req.data_argb       == slv_req.data_argb &
+             mst_req.data_argc       == slv_req.data_argc &
+             mst_req.data_op         == slv_req.data_op   &
+             mst_req.id[IdWidth-1:0] == slv_req.id[IdWidth-1:0];
+
+    endfunction
 
   endclass
+
 
   class rsp_t #(
     parameter int DataWidth    = -1,
@@ -97,7 +115,8 @@ package acc_test;
   class acc_driver #(
     parameter int AccAddrWidth = -1,
     parameter int DataWidth    = -1,
-    parameter int IdWidth      = -1,
+    parameter int InIdWidth    = -1,
+    parameter int ExtIdWidth   = -1,
     parameter int NumRsp       = -1,
     parameter time TA          = 0, // stimuli application time
     parameter time TT          = 0  // stimuli test time
@@ -106,27 +125,28 @@ package acc_test;
     typedef req_t # (
       .AccAddrWidth ( AccAddrWidth ),
       .DataWidth    ( DataWidth    ),
-      .IdWidth      ( IdWidth      ),
+      .IdWidth      ( InIdWidth    ),
       .NumRsp       ( NumRsp       )
     ) int_req_t;
 
     typedef rsp_t # (
-      .DataWidth    ( DataWidth ),
-      .IdWidth      ( IdWidth   )
+      .DataWidth    ( DataWidth  ),
+      .IdWidth      ( ExtIdWidth )
     ) int_rsp_t;
 
     virtual ACC_BUS_DV # (
-      .DataWidth         ( DataWidth    ),
-      .AccAddrWidth      ( AccAddrWidth ),
-      .IdWidth           ( IdWidth      )
+      .DataWidth    ( DataWidth    ),
+      .AccAddrWidth ( AccAddrWidth ),
+      .InIdWidth    ( InIdWidth    ),
+      .ExtIdWidth   ( ExtIdWidth   )
     ) bus;
 
     function new(
       virtual ACC_BUS_DV #(
-
         .DataWidth    ( DataWidth    ),
         .AccAddrWidth ( AccAddrWidth ),
-        .IdWidth      ( IdWidth      )
+        .InIdWidth    ( InIdWidth    ),
+        .ExtIdWidth   ( ExtIdWidth   )
       ) bus
     );
       this.bus=bus;
@@ -254,10 +274,11 @@ package acc_test;
   // Super classes for random acc drivers
   virtual class rand_acc #(
     // Acc interface parameters
-    parameter int DataWidth       = -1,
-    parameter int AccAddrWidth    = -1,
-    parameter int IdWidth         = -1,
-    parameter int NumRsp          = -1,
+    parameter int DataWidth    = -1,
+    parameter int AccAddrWidth = -1,
+    parameter int InIdWidth    = -1,
+    parameter int ExtIdWidth   = -1,
+    parameter int NumRsp       = -1,
 
     // Stimuli application and test time
     parameter time TA = 0ps,
@@ -267,20 +288,21 @@ package acc_test;
     typedef req_t #(
       .AccAddrWidth ( AccAddrWidth ),
       .DataWidth    ( DataWidth    ),
-      .IdWidth      ( IdWidth      ),
+      .IdWidth      ( InIdWidth    ),
       .NumRsp       ( NumRsp       )
     ) int_req_t;
 
     typedef rsp_t #(
-      .DataWidth    ( DataWidth ),
-      .IdWidth      ( IdWidth   )
+      .DataWidth    ( DataWidth  ),
+      .IdWidth      ( ExtIdWidth )
     ) int_rsp_t;
 
     typedef acc_test::acc_driver #(
       // Acc interface parameters
       .AccAddrWidth ( AccAddrWidth ),
       .DataWidth    ( DataWidth    ),
-      .IdWidth      ( IdWidth      ),
+      .InIdWidth    ( InIdWidth    ),
+      .ExtIdWidth   ( ExtIdWidth   ),
       .NumRsp       ( NumRsp       ),
       // Stimuli application and test time
       .TA(TA),
@@ -293,7 +315,8 @@ package acc_test;
       virtual ACC_BUS_DV #(
         .DataWidth    ( DataWidth    ),
         .AccAddrWidth ( AccAddrWidth ),
-        .IdWidth      ( IdWidth      )
+        .InIdWidth    ( InIdWidth    ),
+        .ExtIdWidth   ( ExtIdWidth   )
       ) bus );
       this.drv = new (bus);
     endfunction
@@ -319,7 +342,8 @@ package acc_test;
     // Acc interface parameters
     parameter int DataWidth    = -1,
     parameter int AccAddrWidth = -1,
-    parameter int IdWidth      = -1,
+    parameter int InIdWidth    = -1,
+    parameter int ExtIdWidth   = -1,
     parameter int NumRsp       = -1,
     // Stimuli application and test time
     parameter time         TA                  = 0ps,
@@ -332,7 +356,8 @@ package acc_test;
       // Acc interface parameters
       .AccAddrWidth ( AccAddrWidth ),
       .DataWidth    ( DataWidth    ),
-      .IdWidth      ( IdWidth      ),
+      .InIdWidth    ( InIdWidth    ),
+      .ExtIdWidth   ( ExtIdWidth   ),
       .NumRsp       ( NumRsp       ),
       // Stimuli application and test time
       .TA(TA),
@@ -352,7 +377,8 @@ package acc_test;
       virtual ACC_BUS_DV #(
         .DataWidth    ( DataWidth    ),
         .AccAddrWidth ( AccAddrWidth ),
-        .IdWidth      ( IdWidth      )
+        .InIdWidth    ( InIdWidth    ),
+        .ExtIdWidth   ( ExtIdWidth   )
       ) bus );
       super.new(bus);
     endfunction
@@ -409,7 +435,8 @@ package acc_test;
       // Acc interface parameters
       .AccAddrWidth ( AccAddrWidth ),
       .DataWidth    ( DataWidth    ),
-      .IdWidth      ( IdWidth      ),
+      .InIdWidth    ( IdWidth      ),
+      .ExtIdWidth   ( IdWidth      ),
       .NumRsp       ( NumRsp       ),
       // Stimuli application and test time
       .TA(TA),
@@ -433,9 +460,10 @@ package acc_test;
     /// Constructor.
     function new (
       virtual ACC_BUS_DV #(
-        .DataWidth(DataWidth),
-        .AccAddrWidth(AccAddrWidth),
-        .IdWidth(IdWidth)
+        .DataWidth    ( DataWidth    ),
+        .AccAddrWidth ( AccAddrWidth ),
+        .InIdWidth    ( IdWidth      ),
+        .ExtIdWidth   ( IdWidth      )
       ) bus);
       super.new(bus);
     endfunction
@@ -453,7 +481,6 @@ package acc_test;
       forever begin
         automatic int_rsp_t rsp = new;
         automatic int_req_t req;
-        // $display("Sending Response");
         req_mbx.get(req);
         assert(rsp.randomize());
         // send response back to requester.
@@ -468,18 +495,20 @@ package acc_test;
 
   class acc_slv_monitor #(
     // Acc interface parameters
-    parameter int DataWidth       = -1,
-    parameter int AccAddrWidth    = -1,
-    parameter int IdWidth         = -1,
-    parameter int NumReq          = -1,
-    parameter int NumRsp          = -1,
+    parameter int DataWidth    = -1,
+    parameter int AccAddrWidth = -1,
+    parameter int InIdWidth    = -1,
+    parameter int ExtIdWidth   = -1,
+    parameter int NumReq       = -1,
+    parameter int NumRsp       = -1,
     // Stimuli application and test time
     parameter time  TA = 0ps,
     parameter time  TT = 0ps
   ) extends rand_acc #(
         .DataWidth    ( DataWidth    ),
         .AccAddrWidth ( AccAddrWidth ),
-        .IdWidth      ( IdWidth      ),
+        .InIdWidth    ( ExtIdWidth   ),
+        .ExtIdWidth   ( ExtIdWidth   ),
         .NumRsp       ( NumRsp       ),
         .TA           ( TA           ),
         .TT           ( TT           )
@@ -488,19 +517,13 @@ package acc_test;
     mailbox req_mbx[NumReq];
     mailbox rsp_mbx[NumReq];
 
-    /*
-    task initialize;
-      foreach (req_mbx[ii]) req_mbx[ii] = new();
-      foreach (rsp_mbx[ii]) rsp_mbx[ii] = new();
-    endtask
-    */
-
     // Constructor.
     function new (
       virtual ACC_BUS_DV #(
-        .DataWidth(DataWidth),
-        .AccAddrWidth(AccAddrWidth),
-        .IdWidth(IdWidth)
+        .DataWidth    ( DataWidth    ),
+        .AccAddrWidth ( AccAddrWidth ),
+        .InIdWidth    ( ExtIdWidth   ),
+        .ExtIdWidth   ( ExtIdWidth   )
       ) bus);
       super.new(bus);
       foreach (this.req_mbx[ii]) req_mbx[ii] = new();
@@ -516,17 +539,13 @@ package acc_test;
           automatic int_req_t req;
           this.drv.mon_req(req);
           // put in req mbox corresponding to the requester
-          // $display("Slave Monitor %x\n:", this);
-          // req.display();
-          req_mbx[req.id[IdWidth-1:5]].put(req);
+          req_mbx[req.id[ExtIdWidth-1:InIdWidth]].put(req);
         end
         forever begin
           automatic int_rsp_t rsp;
           this.drv.mon_rsp(rsp);
           // put in req mbox corresponding to the requester
-          // $display("Slave Monitor %x\n:", this);
-          // rsp.display();
-          rsp_mbx[rsp.id[IdWidth-1:5]].put(rsp);
+          rsp_mbx[rsp.id[ExtIdWidth-1:InIdWidth]].put(rsp);
         end
       join
     endtask
@@ -534,17 +553,19 @@ package acc_test;
 
   class acc_mst_monitor #(
     // Acc interface parameters
-    parameter int unsigned DataWidth    =-1,
-    parameter int unsigned AccAddrWidth =-1,
-    parameter int unsigned IdWidth      =-1,
-    parameter int unsigned NumRsp       =-1,
+    parameter int DataWidth    = -1,
+    parameter int AccAddrWidth = -1,
+    parameter int NumRsp       = -1,
+    parameter int InIdWidth    = -1,
+    parameter int ExtIdWidth   = -1,
     // Stimuli application and test time
     parameter time  TA = 0ps,
     parameter time  TT = 0ps
   ) extends rand_acc #(
         .DataWidth    ( DataWidth    ),
         .AccAddrWidth ( AccAddrWidth ),
-        .IdWidth      ( IdWidth      ),
+        .InIdWidth    ( InIdWidth    ),
+        .ExtIdWidth   ( ExtIdWidth   ),
         .NumRsp       ( NumRsp       ),
         .TA           ( TA           ),
         .TT           ( TT           )
@@ -553,19 +574,13 @@ package acc_test;
     mailbox req_mbx [NumRsp];
     mailbox rsp_mbx = new;
 
-    /*
-    task initialize;
-      foreach (req_mbx[ii]) req_mbx[ii] = new();
-    endtask
-    */
-
     // Constructor.
     function new (
-      //$display("blubb");
       virtual ACC_BUS_DV #(
         .DataWidth    ( DataWidth    ),
         .AccAddrWidth ( AccAddrWidth ),
-        .IdWidth      ( IdWidth      )
+        .InIdWidth    ( InIdWidth    ),
+        .ExtIdWidth   ( ExtIdWidth   )
       ) bus);
       super.new(bus);
       foreach (this.req_mbx[ii]) req_mbx[ii] = new;
@@ -580,7 +595,6 @@ package acc_test;
           automatic int_req_t req;
           this.drv.mon_req(req);
           // put in req mbox corresponding to the responder
-          // $display("req.addr: %x\n req.data_arga: %x\n req.id: %x", req.addr, req.data_arga, req.id);
           req_mbx[req.addr].put(req);
         end
         forever begin
