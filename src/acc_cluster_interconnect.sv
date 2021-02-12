@@ -7,22 +7,24 @@
 `include "acc_interface/assign.svh"
 
 module acc_interconnect #(
-  // ISA bit width.
-  parameter int unsigned DataWidth = 32,
+  // Global Number of Hierarchy Levels
+  parameter int NumHier            = -1,
+  // The number of requesters per level.
+  parameter int NumReq[NumHier]    = {-1},
+  // The number of rsponders per level.
+  parameter int NumRsp[NumHier]    = {-1},
   // Global Number of Hierarchy Levels
   parameter int NumHier            = -1,
   // Hierarchy level
   parameter int HierLevel          = -1,
-  // The number of requesters.
-  parameter int NumReq             = -1,
-  // The number of rsponders.
-  parameter int NumRsp             = -1,
+  // ISA bit width.
+  parameter int unsigned DataWidth = 32,
   // Insert Pipeline register into request path
   parameter bit RegisterReq        = 0,
   // Insert Pipeline register into rsponse path
   parameter bit RegisterRsp        = 0,
   // Accelerator Address Width
-  parameter int AccAddrWidth       = -1,
+  parameter int AccAddrWidth       = -1
 
   // Due to different widths of the ID field at the request master and slave
   // side, we need separate struct typedefs.
@@ -64,7 +66,7 @@ module acc_interconnect #(
   localparam int unsigned IdxWidth   = cf_math_pkg::idx_width(NumReq);
   localparam int unsigned ExtIdWidth = 5 + IdxWidth;
 
-  localparam logic [cf_math_pkg::idx_width(NumHier)-1:0] HierAddr = HierLevel;
+  localparam logic [$cf_math_pkg::idx_width(NumHier)-1:0] HierAddr = HierLevel;
 
   typedef logic [AccAddrWidth-1:0] addr_t;
 
@@ -229,22 +231,18 @@ endmodule
 `include "acc_interface/assign.svh"
 
 module acc_interconnect_intf #(
-  // ISA bit width.
-  parameter int unsigned DataWidth = 32,
-  // Global Number of Hierarchy Levels
-  parameter int NumHier            = -1,
-  // Hierarchy level
-  parameter int HierLevel          = -1,
   // The number of requesters.
   parameter int NumReq             = -1,
   // The number of rsponders.
   parameter int NumRsp             = -1,
-  // Insert Pipeline register into request path
-  parameter bit RegisterReq        = 0,
-  // Insert Pipeline register into rsponse path
-  parameter bit RegisterRsp        = 0,
   // Accelerator Address Width
-  parameter int AccAddrWidth       = -1
+  parameter int AccAddrWidth       = acc_pkg::AccAddrWidth,
+  // ISA bit width.
+  parameter int unsigned DataWidth = 32,
+  // Insert Pipelne register into request path
+  parameter bit RegisterReq        = 0,
+  // Insert Pipelne register into rsponse path
+  parameter bit RegisterRsp        = 0
 ) (
   input clk_i,
   input rst_ni,
@@ -277,14 +275,12 @@ module acc_interconnect_intf #(
   acc_ext_rsp_t [NumRsp-1:0] acc_slv_rsp;
 
   acc_interconnect #(
-    .DataWidth      ( DataWidth          ),
-    .NumHier        ( NumHier            ),
-    .HierLevel      ( HierLevel          ),
     .NumReq         ( NumReq             ),
     .NumRsp         ( NumRsp             ),
+    .AccAddrWidth   ( AccAddrWidth       ),
+    .DataWidth      ( DataWidth          ),
     .RegisterReq    ( RegisterReq        ),
     .RegisterRsp    ( RegisterRsp        ),
-    .AccAddrWidth   ( AccAddrWidth       ),
     .req_t          ( acc_req_t          ),
     .req_chan_t     ( acc_req_chan_t     ),
     .rsp_t          ( acc_rsp_t          ),

@@ -19,23 +19,16 @@
 
 interface ACC_BUS #(
   // ISA bit width
-  parameter int unsigned DataWidth       = 32,
+  parameter int unsigned DataWidth    = 32,
   // Accelerator Address Width
-  parameter int          AccAddrWidth    = -1,
-  // The ID width on the master side comes at two different sizes:
-  // req.id[InIdWidth-1:0] is extended accross the interconnect to
-  // rsp.id[InIdWidth+clog2(NumReq)-1:0] (ExtIdWidth)
-  // For slave side interaces set InIdWidth = ExtIdWidth
-  // Input ID Width
-  parameter int          InIdWidth       = -1,
-  // Extended ID Width
-  parameter int          ExtIdWidth      = -1
+  parameter int          AccAddrWidth = -1,
+  // ID Width
+  parameter int          IdWidth      = -1
 );
 
   typedef logic [DataWidth-1:0]    data_t;
   typedef logic [AccAddrWidth-1:0] addr_t;
-  typedef logic [ExtIdWidth-1:0]   ext_id_t;
-  typedef logic [InIdWidth-1:0]    in_id_t;
+  typedef logic [IdWidth-1:0]      id_t;
 
   // Request channel (Q).
   addr_t                      q_addr;
@@ -43,13 +36,13 @@ interface ACC_BUS #(
   data_t                      q_data_arga;
   data_t                      q_data_argb;
   data_t                      q_data_argc;
-  in_id_t                        q_id;
+  id_t                        q_id;
   logic                       q_valid;
   logic                       q_ready;
 
   // Response Channel (P).
   data_t                  p_data;
-  ext_id_t                p_id;
+  id_t                    p_id;
   logic                   p_error;
   logic                   p_valid;
   logic                   p_ready;
@@ -72,22 +65,15 @@ interface ACC_BUS_DV #(
   parameter int unsigned DataWidth       = 32,
   // Accelerator Address Width
   parameter int          AccAddrWidth    = -1,
-  // The ID width on the master side comes at two different sizes:
-  // req.id[InIdWidth-1:0] is extended accross the interconnect to
-  // rsp.id[InIdWidth+clog2(NumReq)-1:0] (ExtIdWidth)
-  // For slave side interaces set InIdWidth = ExtIdWidth
-  // Input ID Width
-  parameter int          InIdWidth       = -1,
-  // Extended ID Width
-  parameter int          ExtIdWidth      = -1
+  // ID Width
+  parameter int          IdWidth         = -1
 ) (
   input logic clk_i
 );
 
   typedef logic [DataWidth-1:0]    data_t;
   typedef logic [AccAddrWidth-1:0] addr_t;
-  typedef logic [ExtIdWidth-1:0]   ext_id_t;
-  typedef logic [InIdWidth-1:0]    in_id_t;
+  typedef logic [IdWidth-1:0]      id_t;
 
   // Request channel (Q).
   addr_t       q_addr;
@@ -95,16 +81,16 @@ interface ACC_BUS_DV #(
   data_t       q_data_arga;
   data_t       q_data_argb;
   data_t       q_data_argc;
-  in_id_t      q_id;
+  id_t         q_id;
   logic        q_valid;
   logic        q_ready;
 
   // Response Channel (P).
-  data_t   p_data;
-  ext_id_t p_id;
-  logic    p_error;
-  logic    p_valid;
-  logic    p_ready;
+  data_t p_data;
+  id_t   p_id;
+  logic  p_error;
+  logic  p_valid;
+  logic  p_ready;
 
   modport in (
     input  q_addr, q_data_op, q_data_arga, q_data_argb, q_data_argc, q_id, q_valid, p_ready,

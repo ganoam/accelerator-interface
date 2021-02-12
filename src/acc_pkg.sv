@@ -7,6 +7,7 @@
 `include "acc_interface/typedef.svh"
 
 
+// TODO: update flexible
 package acc_pkg;
   parameter int unsigned NumReq            = 1;
   parameter int unsigned NumRspPriv        = 1;

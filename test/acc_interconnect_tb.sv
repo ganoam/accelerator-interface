@@ -13,7 +13,6 @@ module acc_interconnect_tb  #(
   parameter int unsigned NumReq       = 8,
   parameter int unsigned NumRsp       = 5,
   parameter int unsigned DataWidth    = 32,
-  parameter int unsigned InIdWidth    = 5,
   parameter bit          RegisterReq  = 0,
   parameter bit          RegisterRsp  = 0,
   // TB params
@@ -21,15 +20,20 @@ module acc_interconnect_tb  #(
 );
 
   // dependent parameters
-  localparam int unsigned AccAddrWidth = $clog2(NumRsp);
-  localparam int unsigned IdxWidth = cf_math_pkg::idx_width(NumReq);
-  localparam int unsigned ExtIdWidth  = InIdWidth + IdxWidth;
+  localparam int unsigned AccAddrWidth = cf_math_pkg::idx_width(NumRsp);
+  localparam int unsigned IdxWidth     = cf_math_pkg::idx_width(NumReq);
+  localparam int unsigned ExtIdWidth   = 5 + IdxWidth;
 
   typedef acc_test::req_t # (
     .AccAddrWidth ( AccAddrWidth ),
     .DataWidth    ( DataWidth    ),
-    .IdWidth      ( InIdWidth    )
+    .IdWidth      ( 5            )
   ) tb_mst_req_t;
+
+  typedef acc_test::rsp_t # (
+    .DataWidth    ( DataWidth ),
+    .IdWidth      ( 5         )
+  ) tb_mst_rsp_t;
 
   typedef acc_test::req_t # (
     .AccAddrWidth ( AccAddrWidth ),
@@ -38,9 +42,9 @@ module acc_interconnect_tb  #(
   ) tb_slv_req_t;
 
   typedef acc_test::rsp_t # (
-    .DataWidth    ( DataWidth ),
-    .IdWidth      ( ExtIdWidth   )
-  ) tb_rsp_t;
+    .DataWidth    ( DataWidth  ),
+    .IdWidth      ( ExtIdWidth )
+  ) tb_slv_rsp_t;
 
   // Timing params
   localparam time ClkPeriod = 10ns;
@@ -52,30 +56,31 @@ module acc_interconnect_tb  #(
   ACC_BUS #(
     .AccAddrWidth ( AccAddrWidth ),
     .DataWidth    ( DataWidth    ),
-    .InIdWidth    ( InIdWidth    ),
-    .ExtIdWidth   ( ExtIdWidth   )
+    .IdWidth      ( 5            )
   ) master [NumReq] ();
 
   ACC_BUS_DV #(
     .AccAddrWidth ( AccAddrWidth ),
     .DataWidth    ( DataWidth    ),
-    .InIdWidth    ( InIdWidth    ),
-    .ExtIdWidth   ( ExtIdWidth   )
+    .IdWidth      ( 5            )
   ) master_dv [NumReq] (clk);
-
 
   ACC_BUS #(
     .AccAddrWidth ( AccAddrWidth ),
     .DataWidth    ( DataWidth    ),
-    .InIdWidth    ( ExtIdWidth   ),
-    .ExtIdWidth   ( ExtIdWidth   )
+    .IdWidth      ( 5            )
+  ) master_next [NumReq] ();
+
+  ACC_BUS #(
+    .AccAddrWidth ( AccAddrWidth ),
+    .DataWidth    ( DataWidth    ),
+    .IdWidth      ( ExtIdWidth   )
   ) slave [NumRsp] ();
 
   ACC_BUS_DV #(
     .AccAddrWidth ( AccAddrWidth ),
     .DataWidth    ( DataWidth    ),
-    .InIdWidth    ( ExtIdWidth   ),
-    .ExtIdWidth   ( ExtIdWidth   )
+    .IdWidth      ( ExtIdWidth   )
   ) slave_dv [NumRsp] (clk);
 
 
@@ -110,8 +115,7 @@ module acc_interconnect_tb  #(
     // Acc bus interface paramaters;
     .DataWidth    ( DataWidth        ),
     .AccAddrWidth ( AccAddrWidth     ),
-    .InIdWidth    ( InIdWidth       ),
-    .ExtIdWidth   ( ExtIdWidth       ),
+    .IdWidth      ( ExtIdWidth       ),
     .NumRsp       ( NumRsp           ),
     .NumReq       ( NumReq           ),
     // Stimuli application and test time
@@ -123,8 +127,7 @@ module acc_interconnect_tb  #(
     // Acc bus interface paramaters;
     .DataWidth    ( DataWidth    ),
     .AccAddrWidth ( AccAddrWidth ),
-    .InIdWidth    ( InIdWidth    ),
-    .ExtIdWidth   ( ExtIdWidth   ),
+    .IdWidth      ( 5            ),
     .NumRsp       ( NumRsp       ),
     // Stimuli application and test time
     .TA ( ApplTime ),
@@ -157,8 +160,7 @@ module acc_interconnect_tb  #(
     // Acc bus interface paramaters;
     .DataWidth    ( DataWidth    ),
     .AccAddrWidth ( AccAddrWidth ),
-    .ExtIdWidth   ( ExtIdWidth   ),
-    .InIdWidth    ( InIdWidth    ),
+    .IdWidth      ( ExtIdWidth   ),
     .NumRsp       ( NumRsp       ),
     .NumReq       ( NumReq       ),
     // Stimuli application and test time
@@ -180,8 +182,7 @@ module acc_interconnect_tb  #(
     // Acc bus interface paramaters;
     .DataWidth    ( DataWidth        ),
     .AccAddrWidth ( AccAddrWidth     ),
-    .InIdWidth    ( InIdWidth        ),
-    .ExtIdWidth   ( ExtIdWidth       ),
+    .IdWidth      ( 5                ),
     .NumRsp       ( NumRsp           ),
     // Stimuli application and test time
     .TA ( ApplTime ),
@@ -203,9 +204,15 @@ module acc_interconnect_tb  #(
   let mstslv_reqcompare(req_mst, req_slv) =
     acc_test::compare_req#(
       .mst_req_t ( tb_mst_req_t ),
-      .slv_req_t ( tb_slv_req_t ),
-      .IdWidth   ( InIdWidth    )
+      .slv_req_t ( tb_slv_req_t )
     )::do_compare(req_mst, req_slv);
+
+  // Compare rsps of different parameterizations
+  let mstslv_rspcompare(rsp_mst, rsp_slv) =
+    acc_test::compare_rsp#(
+      .mst_rsp_t ( tb_mst_rsp_t ),
+      .slv_rsp_t ( tb_slv_rsp_t )
+    )::do_compare(rsp_mst, rsp_slv);
 
 
   // ----------
@@ -285,15 +292,15 @@ module acc_interconnect_tb  #(
       fork
         automatic int j=jj;
         forever begin
-          automatic tb_rsp_t rsp_mst;
+          automatic tb_mst_rsp_t rsp_mst;
           automatic bit rsp_sender_found;
           acc_mst_monitor[j].rsp_mbx.get(rsp_mst);
           nr_responses++;
           for (int l=0; l<NumRsp; l++) begin
             if (acc_slv_monitor[l].rsp_mbx[j].num() != 0) begin
-              automatic tb_rsp_t rsp_slv;
+              automatic tb_slv_rsp_t rsp_slv;
               acc_slv_monitor[l].rsp_mbx[j].peek(rsp_slv);
-              if (rsp_slv.do_compare(rsp_mst)) begin
+              if (mstslv_rspcompare(rsp_mst, rsp_slv)) begin
                 acc_slv_monitor[l].rsp_mbx[j].get(rsp_slv);
                 rsp_sender_found |= 1;
                 break;
@@ -322,16 +329,18 @@ module acc_interconnect_tb  #(
   acc_interconnect_intf #(
     .NumReq       ( NumReq         ),
     .NumRsp       ( NumRsp         ),
+    .NumHier      ( 1              ),
+    .HierLevel    ( 0              ),
     .AccAddrWidth ( AccAddrWidth   ),
     .DataWidth    ( DataWidth      ),
-    .InIdWidth    ( InIdWidth      ),
     .RegisterReq  ( RegisterReq    ),
     .RegisterRsp  ( RegisterRsp    )
   ) dut (
-    .clk_i  ( clk    ),
-    .rst_ni ( rst_n  ),
-    .mst    ( master ),
-    .slv    ( slave  )
+    .clk_i    ( clk         ),
+    .rst_ni   ( rst_n       ),
+    .mst_next ( master_next ),
+    .mst      ( master      ),
+    .slv      ( slave       )
   );
 
 endmodule
