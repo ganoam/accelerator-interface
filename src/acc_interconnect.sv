@@ -1,4 +1,4 @@
-// Copyright 2020 ETH Zurich and University of Bologna.
+
 // Solderpad Hardware License, Version 0.51, see LICENSE for details.
 // SPDX-License-Identifier: SHL-0.51
 
@@ -8,21 +8,23 @@
 
 module acc_interconnect #(
   // ISA bit width.
-  parameter int unsigned DataWidth = 32,
-  // Global Number of Hierarchy Levels
-  parameter int NumHier            = -1,
+  parameter int unsigned DataWidth     = 32,
+  // Hierarchy Address Portion
+  parameter int unsigned HierAddrWidth = -1,
+  // Accelerator Address Portion
+  parameter int unsigned AccAddrWidth  = -1,
+  // Number of Hierarchy levels
+  parameter int unsigned NumHier       = -1,
   // Hierarchy level
-  parameter int HierLevel          = -1,
+  parameter int unsigned HierLevel     = -1,
   // The number of requesters.
-  parameter int NumReq             = -1,
+  parameter int NumReq                 = -1,
   // The number of rsponders.
-  parameter int NumRsp             = -1,
+  parameter int NumRsp                 = -1,
   // Insert Pipeline register into request path
-  parameter bit RegisterReq        = 0,
-  // Insert Pipeline register into rsponse path
-  parameter bit RegisterRsp        = 0,
-  // Accelerator Address Width
-  parameter int AccAddrWidth       = -1,
+  parameter bit RegisterReq            = 0,
+  // Insert Pipeline register into response path
+  parameter bit RegisterRsp            = 0,
 
   // Due to different widths of the ID field at the request master and slave
   // side, we need separate struct typedefs.
@@ -63,18 +65,20 @@ module acc_interconnect #(
 
   localparam int unsigned IdxWidth   = cf_math_pkg::idx_width(NumReq);
   localparam int unsigned ExtIdWidth = 5 + IdxWidth;
+  localparam int unsigned AddrWidth  = HierAddrWidth + AccAddrWidth;
 
-  localparam logic [cf_math_pkg::idx_width(NumHier)-1:0] HierAddr = HierLevel;
+  // Local xbar select signal width
+  localparam int unsigned OfflAddrWidth = cf_math_pkg::idx_width(NumRsp);
 
-  typedef logic [AccAddrWidth-1:0] addr_t;
+  typedef logic [AddrWidth-1:0] addr_t;
 
 
-  req_chan_t [NumReq-1:0]         mst_req_q_chan;
-  addr_t     [NumReq-1:0]         mst_req_q_addr;
-  logic      [NumReq-1:0]         mst_req_q_valid;
-  logic      [NumReq-1:0]         mst_req_p_ready;
+  req_chan_t [NumReq-1:0]                     mst_req_q_chan;
+  logic      [NumReq-1:0][OfflAddrWidth-1:0]  mst_req_q_addr;
+  logic      [NumReq-1:0]                     mst_req_q_valid;
+  logic      [NumReq-1:0]                     mst_req_p_ready;
   // Hierarchy level address
-  logic      [NumReq-1:0] [cf_math_pkg::idx_width(NumHier)-1:0] mst_req_q_level;
+  logic      [NumReq-1:0] [HierAddrWidth-1:0] mst_req_q_level;
 
 
   // this is mst_req_t, bc the payload does not change through the crossbar.
@@ -95,13 +99,10 @@ module acc_interconnect #(
 
   for (genvar i=0; i<NumReq; i++) begin : gen_mst_req_assignment
     assign mst_req_q_chan[i]  = mst_req_i[i].q;
-    assign mst_req_q_addr[i]  = mst_req_i[i].q.addr;
+    // Xbar Address
+    assign mst_req_q_addr[i]  = mst_req_i[i].q.addr[OfflAddrWidth-1:0];
     // Hierarchy level address
-    assign mst_req_q_level[i] =
-      mst_req_i[i].q.addr[AccAddrWidth-1:AccAddrWidth-cf_math_pkg::idx_width(NumHier)-1];
-    // hang in bypass signals
-    // assign mst_req_q_valid[i] = mst_req_i[i].q_valid;
-    //assign mst_req_p_ready[i] = mst_req_i[i].p_ready;
+    assign mst_req_q_level[i] = mst_req_i[i].q.addr[AddrWidth-1:AccAddrWidth];
   end
 
   for (genvar i=0; i<NumRsp; i++) begin : gen_slv_req_assignment
@@ -119,28 +120,24 @@ module acc_interconnect #(
     assign slv_rsp_q_ready[i] = slv_rsp_i[i].q_ready;
   end
 
-  for (genvar i=0; i<NumReq; i++) begin : gen_slv_rsp_assignment
-    assign mst_rsp_o[i].p       = mst_rsp_p_chan[i];
-    // hang in bypass signals
-    // assign mst_rsp_o[i].p_valid = mst_rsp_p_valid[i];
-    // assign mst_rsp_o[i].q_ready = mst_rsp_q_ready[i];
-  end
-
   // Bypass this hierarchy level
   if ( NumHier-1 > HierLevel ) begin : gen_bypass_interconnect
-    for ( genvar i=0; i<NumReq; i++ ) begin : gen_offload_bypass_demux
+    for ( genvar i=0; i<NumReq; i++ ) begin : gen_bypass_path
+      // Offload path
+      assign mst_req_o[i].q = mst_req_i[i].q;
       stream_demux #(
         .N_OUP ( 2 )
       ) offload_bypass_demux_i (
-        .inp_valid_i ( mst_req_i[i].q_valid                    ),
-        .inp_ready_o ( mst_rsp_o[i].q_ready                    ),
-        .oup_sel_i   ( mst_req_q_level[i] == HierAddr          ),
+        .inp_valid_i ( mst_req_i[i].q_valid                       ),
+        .inp_ready_o ( mst_rsp_o[i].q_ready                       ),
+        .oup_sel_i   ( mst_req_q_level[i] != HierLevel            ),
         .oup_valid_o ( {mst_req_o[i].q_valid, mst_req_q_valid[i]} ),
         .oup_ready_i ( {mst_rsp_i[i].q_ready, mst_rsp_q_ready[i]} )
       );
 
+      // Response Path
       stream_arbiter #(
-        .DATA_T  ( rsp_t ),
+        .DATA_T  ( rsp_chan_t ),
         .N_INP   ( 2     ),
         .ARBITER ( "rr"  )
       ) response_bypass_arbiter_i (
@@ -164,7 +161,8 @@ module acc_interconnect #(
       // Offload path
       assign mst_req_q_valid[i]   = mst_req_i[i].q_valid;
       assign mst_rsp_o[i].q_ready = mst_rsp_q_ready[i];
-      // Request path
+      assign mst_rsp_o[i].p       = mst_rsp_p_chan[i];
+      // Rsponse path
       assign mst_rsp_o[i].p_valid = mst_rsp_p_valid[i];
       assign mst_req_p_ready[i]   = mst_req_i[i].p_ready;
 
@@ -179,7 +177,7 @@ module acc_interconnect #(
     end
   end
 
-  // offload path
+  // offload path Xbar
   stream_xbar   #(
     .NumInp      ( NumReq           ),
     .NumOut      ( NumRsp           ),
@@ -201,7 +199,7 @@ module acc_interconnect #(
     .ready_i ( slv_rsp_q_ready )
   );
 
-  // response path
+  // response path Xbar
   stream_xbar   #(
     .NumInp      ( NumRsp      ),
     .NumOut      ( NumReq      ),
@@ -230,21 +228,23 @@ endmodule
 
 module acc_interconnect_intf #(
   // ISA bit width.
-  parameter int unsigned DataWidth = 32,
-  // Global Number of Hierarchy Levels
-  parameter int NumHier            = -1,
+  parameter int unsigned DataWidth     = 32,
+  // Hierarchy Address Portion
+  parameter int unsigned HierAddrWidth = -1,
+  // Accelerator Address Portion
+  parameter int unsigned AccAddrWidth  = -1,
+  // Number of Hierarchy levels
+  parameter int unsigned NumHier       = -1,
   // Hierarchy level
-  parameter int HierLevel          = -1,
-  // The number of requesters.
-  parameter int NumReq             = -1,
+  parameter int unsigned HierLevel     = -1,
+  // The number of requesters
+  parameter int NumReq                 = -1,
   // The number of rsponders.
-  parameter int NumRsp             = -1,
+  parameter int NumRsp                 = -1,
   // Insert Pipeline register into request path
-  parameter bit RegisterReq        = 0,
-  // Insert Pipeline register into rsponse path
-  parameter bit RegisterRsp        = 0,
-  // Accelerator Address Width
-  parameter int AccAddrWidth       = -1
+  parameter bit RegisterReq            = 0,
+  // Insert Pipeline register into response path
+  parameter bit RegisterRsp            = 0
 ) (
   input clk_i,
   input rst_ni,
@@ -256,9 +256,10 @@ module acc_interconnect_intf #(
 
   localparam int unsigned IdxWidth    = cf_math_pkg::idx_width(NumReq);
   localparam int unsigned ExtIdWidth  = 5 + IdxWidth;
+  localparam int unsigned AddrWidth = HierAddrWidth + AccAddrWidth;
 
   typedef logic [DataWidth-1:0]    data_t;
-  typedef logic [AccAddrWidth-1:0] addr_t;
+  typedef logic [AddrWidth-1:0]    addr_t;
   typedef logic [4:0]              in_id_t;
   typedef logic [ExtIdWidth-1:0]   ext_id_t;
 
@@ -278,13 +279,14 @@ module acc_interconnect_intf #(
 
   acc_interconnect #(
     .DataWidth      ( DataWidth          ),
+    .HierAddrWidth  ( HierAddrWidth      ),
+    .AccAddrWidth   ( AccAddrWidth       ),
     .NumHier        ( NumHier            ),
     .HierLevel      ( HierLevel          ),
     .NumReq         ( NumReq             ),
     .NumRsp         ( NumRsp             ),
     .RegisterReq    ( RegisterReq        ),
     .RegisterRsp    ( RegisterRsp        ),
-    .AccAddrWidth   ( AccAddrWidth       ),
     .req_t          ( acc_req_t          ),
     .req_chan_t     ( acc_req_chan_t     ),
     .rsp_t          ( acc_rsp_t          ),

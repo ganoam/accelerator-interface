@@ -16,4 +16,4 @@ call_vsim_gui() {
     grep "Errors: 0," vsim.log
 }
 
-call_vsim_gui acc_interconnect_tb
+call_vsim_gui acc_cluster_interconnect_tb

@@ -7,32 +7,55 @@
 `include "acc_interface/typedef.svh"
 
 
-// TODO: update flexible
 package acc_pkg;
-  parameter int unsigned NumReq            = 1;
-  parameter int unsigned NumRspPriv        = 1;
-  parameter int unsigned NumRspShared      = 1;
-  parameter int unsigned DataWidth         = 32;
-  parameter bit          RegisterReqPriv   = 1'b0;
-  parameter bit          RegisterReqShared = 1'b0;
-  parameter bit          RegisterRspPriv   = 1'b0;
-  parameter bit          RegisterRspShared = 1'b0;
+  // TODO: define common parameters in package
 
-  // maximum number of responders per level
-  parameter MaxNumRsp   = NumRspShared > NumRspPriv ? NumRspShared : NumRspPriv;
-  parameter AccAddrWidth = $clog2(MaxNumRsp) + 1;
 
-  localparam int unsigned IdxWidth = cf_math_pkg::idx_width(NumReq);
-  localparam int unsigned IdWidth  = 5 + IdxWidth;
+  // Helper Functions for localparam definitions.
+  // TODO: put in cf_math_pkg ??
+  function automatic int max (input int a, b);
+    return a>b ? a : b;
+  endfunction
 
-  typedef logic [DataWidth-1:0] data_t;
-  typedef logic [IdWidth-1:0]   id_t;
-  typedef logic [AccAddrWidth-1:0] addr_t;
+  function automatic int maxn (input int arr[], n);
+    return n == 0 ? arr[0] : max(arr[n-1], maxn(arr, n-1));
+  endfunction
 
-  // typedef acc_req_t,
-  // typedef acc_req_chan_t,
-  // typedef acc_rsp_t,
-  // typedef acc_rsp_chan_t,
-  `ACC_TYPEDEF_ALL(acc, addr_t, data_t, id_t)
+  function automatic int sum (input int a, b);
+    return a+b;
+  endfunction
+
+  function automatic int sumn (input int arr[], n);
+    return n==0 ? arr[0] : sum(arr[n-1], sumn(arr, n-1));
+  endfunction
+
+
+typedef enum logic[1:0] {
+  OP_RS,
+  OP_IMM
+} op_sel_e;
+
+// Immediate b selection
+typedef enum logic [2:0] {
+  IMM_I,
+  IMM_S,
+  IMM_B,
+  IMM_U,
+  IMM_J
+} imm_sel_e;
+
+
+typedef struct packed {
+  logic [31:0]   instr_data;
+  logic [31:0]   instr_mask;
+  logic [1:0]    writeback;
+  logic [2:0]    use_rs;
+  op_sel_e       op_a_mux;
+  op_sel_e       op_b_mux;
+  op_sel_e       op_c_mux;
+  imm_sel_e      imm_a_mux;
+  imm_sel_e      imm_b_mux;
+  imm_sel_e      imm_c_mux;
+} offl_instr_t;
 
 endpackage

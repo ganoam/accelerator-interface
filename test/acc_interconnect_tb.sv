@@ -1,4 +1,3 @@
-
 // Copyright 2020 ETH Zurich and University of Bologna.
 // Solderpad Hardware License, Version 0.51, see LICENSE for details.
 // SPDX-License-Identifier: SHL-0.51
@@ -9,7 +8,6 @@
 `include "acc_interface/typedef.svh"
 
 module acc_interconnect_tb  #(
-  // Interconnect parameters from pkg
   parameter int unsigned NumReq       = 8,
   parameter int unsigned NumRsp       = 5,
   parameter int unsigned DataWidth    = 32,
@@ -21,13 +19,18 @@ module acc_interconnect_tb  #(
 
   // dependent parameters
   localparam int unsigned AccAddrWidth = cf_math_pkg::idx_width(NumRsp);
+  localparam int unsigned HierAddrWidth = 1;
+  localparam int unsigned AddrWidth    = AccAddrWidth + HierAddrWidth;
   localparam int unsigned IdxWidth     = cf_math_pkg::idx_width(NumReq);
   localparam int unsigned ExtIdWidth   = 5 + IdxWidth;
+  localparam int unsigned NumHier      = 1;
+  localparam int unsigned HierLevel    = 0;
+
 
   typedef acc_test::req_t # (
-    .AccAddrWidth ( AccAddrWidth ),
-    .DataWidth    ( DataWidth    ),
-    .IdWidth      ( 5            )
+    .AddrWidth ( AddrWidth ),
+    .DataWidth ( DataWidth ),
+    .IdWidth   ( 5         )
   ) tb_mst_req_t;
 
   typedef acc_test::rsp_t # (
@@ -36,9 +39,9 @@ module acc_interconnect_tb  #(
   ) tb_mst_rsp_t;
 
   typedef acc_test::req_t # (
-    .AccAddrWidth ( AccAddrWidth ),
-    .DataWidth    ( DataWidth    ),
-    .IdWidth      ( ExtIdWidth   )
+    .AddrWidth ( AddrWidth  ),
+    .DataWidth ( DataWidth  ),
+    .IdWidth   ( ExtIdWidth )
   ) tb_slv_req_t;
 
   typedef acc_test::rsp_t # (
@@ -54,35 +57,34 @@ module acc_interconnect_tb  #(
   logic clk, rst_n;
 
   ACC_BUS #(
-    .AccAddrWidth ( AccAddrWidth ),
-    .DataWidth    ( DataWidth    ),
-    .IdWidth      ( 5            )
+    .AddrWidth ( AddrWidth ),
+    .DataWidth ( DataWidth ),
+    .IdWidth   ( 5         )
   ) master [NumReq] ();
 
   ACC_BUS_DV #(
-    .AccAddrWidth ( AccAddrWidth ),
-    .DataWidth    ( DataWidth    ),
-    .IdWidth      ( 5            )
+    .AddrWidth ( AddrWidth ),
+    .DataWidth ( DataWidth ),
+    .IdWidth   ( 5         )
   ) master_dv [NumReq] (clk);
 
   ACC_BUS #(
-    .AccAddrWidth ( AccAddrWidth ),
-    .DataWidth    ( DataWidth    ),
-    .IdWidth      ( 5            )
+    .AddrWidth ( AddrWidth ),
+    .DataWidth ( DataWidth ),
+    .IdWidth   ( 5         )
   ) master_next [NumReq] ();
 
   ACC_BUS #(
-    .AccAddrWidth ( AccAddrWidth ),
-    .DataWidth    ( DataWidth    ),
-    .IdWidth      ( ExtIdWidth   )
+    .AddrWidth ( AddrWidth  ),
+    .DataWidth ( DataWidth  ),
+    .IdWidth   ( ExtIdWidth )
   ) slave [NumRsp] ();
 
   ACC_BUS_DV #(
-    .AccAddrWidth ( AccAddrWidth ),
-    .DataWidth    ( DataWidth    ),
-    .IdWidth      ( ExtIdWidth   )
+    .AddrWidth ( AddrWidth  ),
+    .DataWidth ( DataWidth  ),
+    .IdWidth   ( ExtIdWidth )
   ) slave_dv [NumRsp] (clk);
-
 
   for (genvar i=0; i<NumReq; i++) begin : gen_req_if_assignement
     `ACC_ASSIGN(master[i], master_dv[i])
@@ -113,11 +115,11 @@ module acc_interconnect_tb  #(
   // -------
   typedef acc_test::acc_slv_monitor #(
     // Acc bus interface paramaters;
-    .DataWidth    ( DataWidth        ),
-    .AccAddrWidth ( AccAddrWidth     ),
-    .IdWidth      ( ExtIdWidth       ),
-    .NumRsp       ( NumRsp           ),
-    .NumReq       ( NumReq           ),
+    .DataWidth ( DataWidth  ),
+    .AddrWidth ( AddrWidth  ),
+    .IdWidth   ( ExtIdWidth ),
+    .NumRsp    ( NumRsp     ),
+    .NumReq    ( NumReq     ),
     // Stimuli application and test time
     .TA ( ApplTime ),
     .TT ( TestTime )
@@ -125,10 +127,10 @@ module acc_interconnect_tb  #(
 
   typedef acc_test::acc_mst_monitor #(
     // Acc bus interface paramaters;
-    .DataWidth    ( DataWidth    ),
-    .AccAddrWidth ( AccAddrWidth ),
-    .IdWidth      ( 5            ),
-    .NumRsp       ( NumRsp       ),
+    .DataWidth ( DataWidth ),
+    .AddrWidth ( AddrWidth ),
+    .IdWidth   ( 5         ),
+    .NumRsp    ( NumRsp    ),
     // Stimuli application and test time
     .TA ( ApplTime ),
     .TT ( TestTime )
@@ -158,11 +160,11 @@ module acc_interconnect_tb  #(
   // ------
   typedef acc_test::rand_acc_slave #(
     // Acc bus interface paramaters;
-    .DataWidth    ( DataWidth    ),
-    .AccAddrWidth ( AccAddrWidth ),
-    .IdWidth      ( ExtIdWidth   ),
-    .NumRsp       ( NumRsp       ),
-    .NumReq       ( NumReq       ),
+    .DataWidth ( DataWidth  ),
+    .AddrWidth ( AddrWidth  ),
+    .IdWidth   ( ExtIdWidth ),
+    .NumRsp    ( NumRsp     ),
+    .NumReq    ( NumReq     ),
     // Stimuli application and test time
     .TA ( ApplTime ),
     .TT ( TestTime )
@@ -180,10 +182,12 @@ module acc_interconnect_tb  #(
 
   typedef acc_test::rand_acc_master #(
     // Acc bus interface paramaters;
-    .DataWidth    ( DataWidth        ),
-    .AccAddrWidth ( AccAddrWidth     ),
-    .IdWidth      ( 5                ),
-    .NumRsp       ( NumRsp           ),
+    .DataWidth     ( DataWidth     ),
+    .AccAddrWidth  ( AccAddrWidth  ),
+    .HierAddrWidth ( HierAddrWidth ),
+    .IdWidth       ( 5             ),
+    .NumRsp        ( '{NumRsp}     ),
+    .NumHier       ( NumHier       ),
     // Stimuli application and test time
     .TA ( ApplTime ),
     .TT ( TestTime )
@@ -213,7 +217,6 @@ module acc_interconnect_tb  #(
       .mst_rsp_t ( tb_mst_rsp_t ),
       .slv_rsp_t ( tb_slv_rsp_t )
     )::do_compare(rsp_mst, rsp_slv);
-
 
   // ----------
   // Scoreboard
@@ -327,14 +330,15 @@ module acc_interconnect_tb  #(
   end
 
   acc_interconnect_intf #(
-    .NumReq       ( NumReq         ),
-    .NumRsp       ( NumRsp         ),
-    .NumHier      ( 1              ),
-    .HierLevel    ( 0              ),
-    .AccAddrWidth ( AccAddrWidth   ),
-    .DataWidth    ( DataWidth      ),
-    .RegisterReq  ( RegisterReq    ),
-    .RegisterRsp  ( RegisterRsp    )
+    .DataWidth     ( DataWidth     ),
+    .HierAddrWidth ( HierAddrWidth ),
+    .AccAddrWidth  ( AccAddrWidth  ),
+    .NumHier       ( NumHier       ),
+    .HierLevel     ( 0             ),
+    .NumReq        ( NumReq        ),
+    .NumRsp        ( NumRsp        ),
+    .RegisterReq   ( RegisterReq   ),
+    .RegisterRsp   ( RegisterRsp   )
   ) dut (
     .clk_i    ( clk         ),
     .rst_ni   ( rst_n       ),

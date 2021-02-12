@@ -20,15 +20,15 @@
 interface ACC_BUS #(
   // ISA bit width
   parameter int unsigned DataWidth    = 32,
-  // Accelerator Address Width
-  parameter int          AccAddrWidth = -1,
+  // Address Width
+  parameter int          AddrWidth    = -1,
   // ID Width
   parameter int          IdWidth      = -1
 );
 
-  typedef logic [DataWidth-1:0]    data_t;
-  typedef logic [AccAddrWidth-1:0] addr_t;
-  typedef logic [IdWidth-1:0]      id_t;
+  typedef logic [DataWidth-1:0] data_t;
+  typedef logic [AddrWidth-1:0] addr_t;
+  typedef logic [IdWidth-1:0]   id_t;
 
   // Request channel (Q).
   addr_t                      q_addr;
@@ -63,8 +63,8 @@ endinterface
 interface ACC_BUS_DV #(
   // ISA bit width
   parameter int unsigned DataWidth       = 32,
-  // Accelerator Address Width
-  parameter int          AccAddrWidth    = -1,
+  // Address Width
+  parameter int          AddrWidth       = -1,
   // ID Width
   parameter int          IdWidth         = -1
 ) (
@@ -72,7 +72,7 @@ interface ACC_BUS_DV #(
 );
 
   typedef logic [DataWidth-1:0]    data_t;
-  typedef logic [AccAddrWidth-1:0] addr_t;
+  typedef logic [AddrWidth-1:0]    addr_t;
   typedef logic [IdWidth-1:0]      id_t;
 
   // Request channel (Q).

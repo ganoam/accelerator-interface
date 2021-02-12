@@ -9,11 +9,11 @@ package acc_test;
   import acc_pkg::*;
 
   class req_t #(
-    parameter int AccAddrWidth = -1,
+    parameter int AddrWidth    = -1,
     parameter int DataWidth    = -1,
     parameter int IdWidth      = -1
   );
-    rand logic [AccAddrWidth-1:0] addr;
+    rand logic [AddrWidth-1:0]    addr;
     rand logic [DataWidth-1:0]    data_arga;
     rand logic [DataWidth-1:0]    data_argb;
     rand logic [DataWidth-1:0]    data_argc;
@@ -21,7 +21,7 @@ package acc_test;
     rand logic [IdWidth-1:0]      id;
 
     typedef req_t # (
-      .AccAddrWidth ( AccAddrWidth ),
+      .AddrWidth    ( AddrWidth    ),
       .DataWidth    ( DataWidth    ),
       .IdWidth      ( IdWidth      )
     ) int_req_t;
@@ -93,8 +93,9 @@ package acc_test;
     endfunction
   endclass
 
+
   class acc_driver #(
-    parameter int AccAddrWidth = -1,
+    parameter int AddrWidth    = -1,
     parameter int DataWidth    = -1,
     parameter int IdWidth      = -1,
     parameter int NumRsp       = -1,
@@ -103,8 +104,8 @@ package acc_test;
   );
 
     typedef req_t # (
-      .AccAddrWidth ( AccAddrWidth ),
       .DataWidth    ( DataWidth    ),
+      .AddrWidth    ( AddrWidth    ),
       .IdWidth      ( IdWidth      )
     ) int_req_t;
 
@@ -115,14 +116,14 @@ package acc_test;
 
     virtual ACC_BUS_DV # (
       .DataWidth    ( DataWidth    ),
-      .AccAddrWidth ( AccAddrWidth ),
+      .AddrWidth    ( AddrWidth    ),
       .IdWidth      ( IdWidth      )
     ) bus;
 
     function new(
       virtual ACC_BUS_DV #(
         .DataWidth    ( DataWidth    ),
-        .AccAddrWidth ( AccAddrWidth ),
+        .AddrWidth    ( AddrWidth    ),
         .IdWidth      ( IdWidth      )
       ) bus
     );
@@ -252,9 +253,9 @@ package acc_test;
   virtual class rand_acc #(
     // Acc interface parameters
     parameter int DataWidth    = -1,
-    parameter int AccAddrWidth = -1,
+    parameter int AddrWidth    = -1,
     parameter int IdWidth      = -1,
-    parameter int NumRsp       = -1,
+    parameter int NumRsp       = -1, // TODO: Remove unused parameter
 
     // Stimuli application and test time
     parameter time TA = 0ps,
@@ -262,7 +263,7 @@ package acc_test;
   );
 
     typedef req_t #(
-      .AccAddrWidth ( AccAddrWidth ),
+      .AddrWidth    ( AddrWidth    ),
       .DataWidth    ( DataWidth    ),
       .IdWidth      ( IdWidth      )
     ) int_req_t;
@@ -274,7 +275,7 @@ package acc_test;
 
     typedef acc_test::acc_driver #(
       // Acc interface parameters
-      .AccAddrWidth ( AccAddrWidth ),
+      .AddrWidth    ( AddrWidth    ),
       .DataWidth    ( DataWidth    ),
       .IdWidth      ( IdWidth      ),
       // Stimuli application and test time
@@ -287,7 +288,7 @@ package acc_test;
     function new(
       virtual ACC_BUS_DV #(
         .DataWidth    ( DataWidth    ),
-        .AccAddrWidth ( AccAddrWidth ),
+        .AddrWidth    ( AddrWidth    ),
         .IdWidth      ( IdWidth      )
       ) bus );
       this.drv = new (bus);
@@ -311,10 +312,12 @@ package acc_test;
   // Generate random requests as a master device.
   class rand_acc_master #(
     // Acc interface parameters
-    parameter int DataWidth    = -1,
-    parameter int AccAddrWidth = -1,
-    parameter int IdWidth      = -1,
-    parameter int NumRsp       = -1,
+    parameter int DataWidth       = -1,
+    parameter int AccAddrWidth    = -1,
+    parameter int HierAddrWidth   = -1,
+    parameter int IdWidth         = -1,
+    parameter int NumHier         = -1,
+    parameter int NumRsp[NumHier] = '{-1},
     // Stimuli application and test time
     parameter time         TA                  = 0ps,
     parameter time         TT                  = 0ps,
@@ -324,10 +327,9 @@ package acc_test;
     parameter int unsigned RSP_MAX_WAIT_CYCLES = 20
   ) extends rand_acc #(
       // Acc interface parameters
-      .AccAddrWidth ( AccAddrWidth ),
-      .DataWidth    ( DataWidth    ),
-      .IdWidth      ( IdWidth      ),
-      .NumRsp       ( NumRsp       ),
+      .AddrWidth ( AccAddrWidth + HierAddrWidth ),
+      .DataWidth ( DataWidth                    ),
+      .IdWidth   ( IdWidth                      ),
       // Stimuli application and test time
       .TA(TA),
       .TT(TT)
@@ -344,9 +346,9 @@ package acc_test;
     // Constructor.
     function new (
       virtual ACC_BUS_DV #(
-        .DataWidth    ( DataWidth    ),
-        .AccAddrWidth ( AccAddrWidth ),
-        .IdWidth      ( IdWidth      )
+        .DataWidth ( DataWidth                    ),
+        .AddrWidth ( AccAddrWidth + HierAddrWidth ),
+        .IdWidth   ( IdWidth                      )
       ) bus );
       super.new(bus);
     endfunction
@@ -366,7 +368,8 @@ package acc_test;
         this.cnt++;
         assert(req.randomize with
           {
-            addr inside {[0:NumRsp-1]};
+            addr[AddrWidth-1:AccAddrWidth] inside {[0:NumHier-1]};
+            addr[AccAddrWidth-1:0]         inside {[0:NumRsp[addr[AddrWidth-1:AccAddrWidth]]-1]};
           }
         );
         rand_wait(REQ_MIN_WAIT_CYCLES, REQ_MAX_WAIT_CYCLES);
@@ -390,7 +393,7 @@ package acc_test;
 
   class rand_acc_slave #(
     // Acc interface parameters
-    parameter int AccAddrWidth = -1,
+    parameter int AddrWidth    = -1,
     parameter int DataWidth    = -1,
     parameter int IdWidth      = -1,
     parameter int NumRsp       = -1,
@@ -404,10 +407,10 @@ package acc_test;
     parameter int unsigned RSP_MAX_WAIT_CYCLES = 10
   ) extends rand_acc #(
       // Acc interface parameters
-      .AccAddrWidth ( AccAddrWidth ),
-      .DataWidth    ( DataWidth    ),
-      .IdWidth      ( IdWidth      ),
-      .NumRsp       ( NumRsp       ),
+      .AddrWidth ( AddrWidth ),
+      .DataWidth ( DataWidth ),
+      .IdWidth   ( IdWidth   ),
+      .NumRsp    ( NumRsp    ),
       // Stimuli application and test time
       .TA(TA),
       .TT(TT)
@@ -431,7 +434,7 @@ package acc_test;
     function new (
       virtual ACC_BUS_DV #(
         .DataWidth    ( DataWidth    ),
-        .AccAddrWidth ( AccAddrWidth ),
+        .AddrWidth    ( AddrWidth    ),
         .IdWidth      ( IdWidth      )
       ) bus);
       super.new(bus);
@@ -485,7 +488,7 @@ package acc_test;
   class acc_slv_monitor #(
     // Acc interface parameters
     parameter int DataWidth    = -1,
-    parameter int AccAddrWidth = -1,
+    parameter int AddrWidth    = -1,
     parameter int IdWidth      = -1,
     parameter int NumReq       = -1,
     parameter int NumRsp       = -1,
@@ -494,7 +497,7 @@ package acc_test;
     parameter time  TT = 0ps
   ) extends rand_acc #(
         .DataWidth    ( DataWidth    ),
-        .AccAddrWidth ( AccAddrWidth ),
+        .AddrWidth    ( AddrWidth    ),
         .IdWidth      ( IdWidth      ),
         .NumRsp       ( NumRsp       ),
         .TA           ( TA           ),
@@ -508,7 +511,7 @@ package acc_test;
     function new (
       virtual ACC_BUS_DV #(
         .DataWidth    ( DataWidth    ),
-        .AccAddrWidth ( AccAddrWidth ),
+        .AddrWidth    ( AddrWidth    ),
         .IdWidth      ( IdWidth      )
       ) bus);
       super.new(bus);
@@ -540,7 +543,7 @@ package acc_test;
   class acc_mst_monitor #(
     // Acc interface parameters
     parameter int DataWidth    = -1,
-    parameter int AccAddrWidth = -1,
+    parameter int AddrWidth    = -1,
     parameter int NumRsp       = -1,
     parameter int IdWidth      = -1,
     // Stimuli application and test time
@@ -548,21 +551,23 @@ package acc_test;
     parameter time  TT = 0ps
   ) extends rand_acc #(
         .DataWidth    ( DataWidth    ),
-        .AccAddrWidth ( AccAddrWidth ),
+        .AddrWidth    ( AddrWidth    ),
         .IdWidth      ( IdWidth      ),
         .NumRsp       ( NumRsp       ),
         .TA           ( TA           ),
         .TT           ( TT           )
     );
 
-    mailbox req_mbx [NumRsp];
+    // TODO: Too many mailboxes. Only need NumRsp, but difficult to reduce.
+    // Also change accordingly: mark XXX
+    mailbox req_mbx [AddrWidth**2];
     mailbox rsp_mbx = new;
 
     // Constructor.
     function new (
       virtual ACC_BUS_DV #(
         .DataWidth    ( DataWidth    ),
-        .AccAddrWidth ( AccAddrWidth ),
+        .AddrWidth    ( AddrWidth    ),
         .IdWidth      ( IdWidth      )
       ) bus);
       super.new(bus);
@@ -571,7 +576,6 @@ package acc_test;
 
     // Master Monitor.
     // For each slave maintain a separate mailbox.
-
     task monitor;
       fork
         forever begin
