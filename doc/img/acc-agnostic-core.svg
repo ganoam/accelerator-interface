@@ -13,7 +13,10 @@
    version="1.1"
    id="svg46544"
    inkscape:version="1.0.1 (1.0.1+r75)"
-   sodipodi:docname="acc-agnostic-core.svg">
+   sodipodi:docname="acc-agnostic-core.svg"
+   inkscape:export-filename="/run/user/1000/gvfs/sftp:host=badile12.ee.ethz.ch,user=msc20f1/scratch/msc20f1/projects/copr-int/accelerator-interface/doc/img/acc-agnostic-core.png"
+   inkscape:export-xdpi="290.60001"
+   inkscape:export-ydpi="290.60001">
   <defs
      id="defs46538">
     <rect
@@ -75,7 +78,7 @@
        inkscape:isstock="true">
       <path
          transform="matrix(0.4,0,0,0.4,4,0)"
-         style="fill:#ff00ef;fill-opacity:1;fill-rule:evenodd;stroke:#000000;stroke-width:1pt;stroke-opacity:1"
+         style="fill:#ff00b5;fill-opacity:1;fill-rule:evenodd;stroke:#000000;stroke-width:1pt;stroke-opacity:1"
          d="M 0,0 5,-5 -12.5,0 5,5 Z"
          id="path30831-8-3-4-2-6-0" />
     </marker>
@@ -769,7 +772,7 @@
        inkscape:isstock="true">
       <path
          transform="matrix(0.4,0,0,0.4,4,0)"
-         style="fill:#ff00ef;fill-opacity:1;fill-rule:evenodd;stroke:#000000;stroke-width:1pt;stroke-opacity:1"
+         style="fill:#0000ff;fill-opacity:1;fill-rule:evenodd;stroke:#000000;stroke-width:1pt;stroke-opacity:1"
          d="M 0,0 5,-5 -12.5,0 5,5 Z"
          id="path30831-8-3-4-1-9-6-1" />
     </marker>
@@ -1149,9 +1152,9 @@
      borderopacity="1.0"
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
-     inkscape:zoom="0.45254834"
-     inkscape:cx="1277.6381"
-     inkscape:cy="233.68348"
+     inkscape:zoom="0.90509668"
+     inkscape:cx="957.55312"
+     inkscape:cy="509.12625"
      inkscape:document-units="mm"
      inkscape:current-layer="layer1"
      inkscape:document-rotation="0"
@@ -1249,7 +1252,7 @@
          style="fill:#0000ff;fill-opacity:1;stroke-width:0.265;stroke-miterlimit:4;stroke-dasharray:none">rs2</tspan></text>
     <path
        style="fill:#ff00b5;fill-opacity:1;stroke:#000000;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;marker-start:url(#marker30833-6-2-7-3-2-1)"
-       d="M -94.713773,18.523094 H -136.38508"
+       d="M -94.192368,-110.21991 H -135.86367"
        id="path30165-4-0-6-7-2-7"
        inkscape:export-xdpi="290.60001"
        inkscape:export-ydpi="290.60001" />
@@ -2046,17 +2049,17 @@
        inkscape:export-ydpi="290.60001" />
     <text
        xml:space="preserve"
-       style="font-size:4.23333px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;fill:#ff00b5;fill-opacity:1;stroke-width:0.264583"
-       x="-128.42833"
-       y="16.07497"
+       style="font-size:4.23333px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;fill:#0000ff;fill-opacity:1;stroke-width:0.264583;"
+       x="-111.53051"
+       y="-112.66803"
        id="text85641-7-8"
        inkscape:export-xdpi="290.60001"
        inkscape:export-ydpi="290.60001"><tspan
          sodipodi:role="line"
          id="tspan85639-5-9"
-         x="-128.42833"
-         y="16.07497"
-         style="fill:#ff00b5;fill-opacity:1;stroke-width:0.264583">offload_rs_valid</tspan></text>
+         x="-111.53051"
+         y="-112.66803"
+         style="fill:#0000ff;fill-opacity:1;stroke-width:0.264583;">rs_valid</tspan></text>
     <path
        style="fill:#0000ff;fill-opacity:1;stroke:#0000ff;stroke-width:0.265;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker-start:url(#marker30833-6-2-7-2-5-4)"
        d="M -94.659879,-125.28821 H -135.80978"
@@ -2243,14 +2246,14 @@
          y="-155.48434"
          style="stroke-width:0.264583">Scoreboard + regfile </tspan></text>
     <path
-       style="fill:#ff00b5;fill-opacity:1;stroke:#000000;stroke-width:0.565;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker-start:url(#marker30833-6-2-7-2-5-4-3)"
+       style="fill:#0000ff;fill-opacity:1;stroke:#000000;stroke-width:0.565;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker-start:url(#marker30833-6-2-7-2-5-4-3)"
        d="m -151.50947,-115.9339 h -41.34812"
        id="path30165-4-0-6-0-5-2-9"
        inkscape:export-xdpi="290.60001"
        inkscape:export-ydpi="290.60001" />
     <text
        xml:space="preserve"
-       style="font-size:4.23333px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;fill:#0000b5;fill-opacity:1;stroke-width:0.264583"
+       style="font-size:4.23333px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;fill:#0000ff;fill-opacity:1;stroke-width:0.264583;"
        x="-189.87891"
        y="-118.02033"
        id="text79883-8-9-5-6"
@@ -2260,7 +2263,7 @@
          id="tspan79881-8-4-8-4"
          x="-189.87891"
          y="-118.02033"
-         style="fill:#0000b5;fill-opacity:1;stroke-width:0.264583">rs_valid_o</tspan></text>
+         style="fill:#0000ff;fill-opacity:1;stroke-width:0.264583;">rs_valid_o</tspan></text>
     <g
        id="g9856"
        transform="translate(10.448801,-6.879167)">
