@@ -10,45 +10,132 @@ It implements two independent decoupled channels (request and response) which ar
   - The receiver asserts `ready` whenever it is ready to receive the transaction. Asserting `ready` by default is allowed. While `valid` is low, `ready` may be retracted at any time.
   - When both `valid` and `ready` are high the transaction is successful.
 
-## Parameters
-The interface is compatible with 32, 64 and 128-bit RISC-V ISA variants.
-It is designed to work with a configurable number of requesters and (shared) responders.
-The top level configuration parameters are:
+## Overview
 
-| Name               | Type / Range                                     | Default | Description                                |
-| ------------------ | ------------------------------------------------ | ------- | ------------------------------------------ |
-| `NumReq`           | `int` (>=1)                                      | 1       | Number of requesting entities              |
-| `NumRespPriv`      | `int` (>=0)                                      | 1       | Number of core-private responding entities |
-| `NumRespShared`    | `int` (>=0)                                      | 1       | Number of shared responding entities       |
-| `AccAddrWidth`     | `int` clog2(max(NumRespPriv, NumRespShared)) + 1 |         | Accelerator Address                        |
-| `DataWidth`        | `int` (32, 64, 128)                              | 32      | ISA Bit Width                              |
+### Hierarchical Interconnect
+The accelerator interface is designed to enable a number of flexible topologies.
+The simplest topology is the direct attachment of one or multiple accelerator to a single CPU core.
+The interconnect also supports sharinig of accelerators accross multiple accelerators accross multiple cores in a cluster-like topology.
+The sharing granularity of accelerators is flexible.
+Any number of cores in a cluster can be connected to share a selection of accelerators resulting in a hierarchical interconnect.
 
-## Channels
+An example cluster topology is shown below.
+The cluster features a total of four cores.
+Each core is connected to four core-private accelerators.
+Two cores each share a set of another two accelerators.
+Finally, two accelerators are shared among all cluster cores.
+
+![Accelerator Interconnect](img/acc-interconnect.svg)
+
+### Multiple Accelerators of the Same Type
+The depicted interconnect schematic relies upon the [stream\_xbar](https://github.com/pulp-platform/common_cells/blob/master/src/stream_xbar.sv) IP to facilitate routing of requests and responses from and to the accelerator structures.
+One limitation of using this IP is that it is not possible to utilize multiple accelerators of the same type at the same accelerator address.
+This issue will be relieved by implementing a variant of the IP which uses a N:K streaming arbiter in the output path of the stream\_xbar.
+An according IP exists in the [APU Cluster](https://github.com/pulp-platform/apu_cluster/tree/master/sourcecode/marx).
+
+### Accelerator-agnostic Instruction offloading
+To decouple the development of accelerators and cores, it may be beneficial separate the handling of offloaded instructions from the rest of the core's operation.
+To minimize the hardware changes to the core architecture to support ISA extensions through external accelerators, a specialized [Accelerator Adapter](accelerator_agnostic_interface.md) module has been defined.
+
+## Interface Definition
+The accelerator interconnect features two independent decoupled channels for offloading requests and accelerator write-back.
 
 ### Request Channel (`q`)
-
 An offload request comprises the entire 32-bit RISC-V instruction three operands and a request ID tag specifying requesting entity.
 The nature of the offloaded instructions is not of importance to the accelerator interconnect.
 The request channel interface signals are:
 
-| Signal Name   | Range                   | Description                          |
-| ------------- | ----------------------- | ------------------------------------ |
-| `q_addr`      | `AccAddrWidth-1`        | Accelerator Sharing Level            |
-|               | `AccAddrWidth-2:0`      | Accelerator Address                  |
-| `q_req_id`    | `clog2(NumReq)-1:0`     | Requester ID                         |
-| `q_rd_id`     | `4:0`                   | Destination Register Address         |
-| `q_data_op`   | `31:0`                  | RISC-V Instruction Data              |
-| `q_data_arga` | `DataWidth-1:0`         | Operand A                            |
-| `q_data_argb` | `DataWidth-1:0`         | Operand B                            |
-| `q_data_argc` | `DataWidth-1:0`         | Operand C                            |
-
+| Signal Name   | Width / Range              | Description                                     |
+| ------------- | -------------------------- | ----------------------------------------------- |
+| `q_addr`      | `clog2(NumHier)` / MSB     | Accelerator hierarchy level.                    |
+|               | `clog2(max(NumReq))` / LSB | Accelerator Address. Unique per hierarchy level |
+| `q_id`        | `clog2(NumReq)` / MSB      | Requester ID.                                   |
+|               | `5` / `4:0`                | Destination Register Address                    |
+| `q_data_op`   | `31`                       | RISC-V Instruction Data                         |
+| `q_data_arga` | `DataWidth`                | Operand A                                       |
+| `q_data_argb` | `DataWidth`                | Operand B                                       |
+| `q_data_argc` | `DataWidth`                | Operand C                                       |
 
 Notes:
-  - The *Requester ID* is assigned during traversal of the request path.
-    In core-private accelerator interconnects it will be assigned to constant zero.
-    In shared accelerator interconnect the field identifies the offloading cores to facilitate core-specific operations back-routing responses.
-  - Core-private accelerators are accessed by setting the MSB `q_addr` to 0.
-    Requests to cluster-level shared accelerators are issued by setting the MSB of `q_addr` to 1.
+  - The accelerator address `q_addr` is partitioned into the MSB Range identifying the interconnect hierarchy level of the target accelerator and the LSB Range denoting the accelerator address within a given hierarchy level.
+    The total width of the accelerator address signal is given by `clog2(Number of hierarchy levels) + clog2(max(Number of accelerators per level))`
+    The full accelerator address must be known to the offloading entity (core or [accelerator adapter](accelerator_agnostic_interface.md)).
+  - The `q_id` signal uniquely identifies the response target of any request.
+    On the core level, the signal is assigned five bits `4:0` identifying the eventual destination register.
+    During traversal of the accelerator interconnect, the signal is extended with an additional `clog2(NumReq)` bits at the MSB end, to identify the originating port.
+    The width of the signal at the core request input port of the interconnect is 5 bits.
+    The width at the accelerator request output port of the interconnect is `5+clog2(NumReq)` bits.
+    `NumReq` denotes the number of requesting entities in the target interconnect hierarchy level.
+    The signal is latched by the accelerator subsystem and used for eventual route-back of the instruction write-back data.
+
+
+### Response Channel (`p`)
+*Not* every operation which was offloaded must ultimately return a response.
+If a response is returned, the response channel carries the following signals:
+
+| Signal Name   | Range                   | Description                          |
+| ------------- | ----------------------- | ------------------------------------ |
+| `p_id`        | MSB                     | Requester ID                         |
+|               | `4:0`                   | Destination Register Address         |
+| `p_data0`     | `DataWidth-1:0`         | Primary Writeback Data               |
+| `p_data1`     | `DataWidth-1:0`         | Secondary Writeback Data             |
+| `p_dualwb`    | `0:0`                   | Dual-Writeback Response              |
+| `p_error`     | `0:0`                   | Error Flag                           |
+
+Notes:
+  - `p_data0` and `p_data1` carry the response data resulting from offloaded instructions.
+    `p_data0` carries the default write-back data and is written to the destination register identified by `p_rd_id`.
+    `p_data1` is used only for dual-writeback instructions.
+  - Dual write-back instructions are marked by the accelerator sub-system by setting `p_dualwb`.
+  - The error flag included in the response channel indicates processing errors encountered by the accelerator.
+    The actions to be taken by a core to recover from accelerator errors are not yet fully defined.
+
+## Interconnect Module
+The interconnect module is instantiated at each hierarchy level.
+
+### Parameters
+
+#### Level Specific Parameters
+On each interconnect level, the following parameters are set:
+| Name               | Type / Range  | Description                                      |
+| ------------------ | ------------- | ------------------------------------------------ |
+| `NumReq`           | `int` (>=1)   | Number of requesting entities                    |
+| `NumRsp`           | `int` (>=1)   | Number of responding entities                    |
+| `HierLevel`        | `int` (>=0)   | Hierarchical position of the interconnect module |
+| `RegisterReq`      | `bit` (0,1)   | Register Request Path                            |
+| `RegisterRsp`      | `bit` (0,1)   | Register Response Path                           |
+
+##### Global Parameters
+
+| Name               | Type / Value                   | Description                                    |
+| ------------------ | ------------------------------ | ---------------------------------------------- |
+| `NumHier`          | `int` (>=1)   | Number of hierarchical levels                    |
+| `
+
+#### Global Interconnect Parameters
+The following parameters are set on the cluster level and are the same for each interconnect level
+
+| Name               | Type / Range  | Description                                |
+| ------------------ | ------------- | ------------------------------------------ |
+| `NumReq`           | `int` (>=1)   | Number of requesting entities              |
+| `NumRsp`           | `int` (>=1)   | Number of responding entities              |
+| `HierLevel`        | `int` (>=0)   | Position of the interconnect module
+
+
+On each hierarchy level, the following dependent paramters are
+| Name               | Value              | Description                           |
+| ------------------ | ------------------ | ------------------------------------- |
+| `ExtIdWidth`       | `5 + clog2(NumReq) | Extended Width of Request ID Signal   |
+
+
+
+
+
+
+| `AccAddrWidth`     | `int` clog2(max(NumRespPriv, NumRespShared)) + 1 | Accelerator Address                        |
+| `DataWidth`        | `int` (32, 64, 128)                              | ISA Bit Width                              |
+## Channels
+
 
 ### Response Channel (`p`)
 *Not* every operation which was offloaded must ultimately return a response.
@@ -122,21 +209,6 @@ For instructions mandating writeback to the core, the request ID must be returne
 
 ![Accelerator Subsystem](img/acc-ss.svg)
 
-
-
-## Interconnect Layout
-The accelerator interconnect supposts external accelerators aranged in two levels.
-The level of an accelerator to which an offload instruction is adressed is determined by the most significant bit of the accelerator address field of the request channel (0=private, 1=shared).
-
-A schematic of the accelerator interconnect is shown below.
-
-![Accelerator Interconnect](img/acc-interconnect.svg)
-
-### Multiple Accelerators of the Same Type
-The depicted interconnect schematic makes extensive use of the [stream\_xbar](https://github.com/pulp-platform/common_cells/blob/master/src/stream_xbar.sv) IP to facilitate routing of requests and responses from and to the accelerator structures.
-One limitation of using this IP is that it is not possible to utilize multiple accelerators of the same type at the same accelerator address.
-This issue could be relieved by implementing a variant of the IP which uses a N:K streaming arbiter in the output path of the stream\_xbar.
-An according IP exists in the [APU Cluster](https://github.com/pulp-platform/apu_cluster/tree/master/sourcecode/marx).
 
 ## Open Questions
 

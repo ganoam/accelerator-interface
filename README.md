@@ -11,4 +11,5 @@ A more thourough documentation can be found in the [docs](doc/index.md) folder.
 | ------------------ | --------------------------------------------------------------- | ----------------- |
 | `acc_intf`         | Systemverilog interface definition of the `accelerator interface`. | in development |
 | `acc_interconnect` | Accelerator offload and response path.                             | in development |
-
+| `acc_adapter`      | Accelerator-agnostic instruction offloading adapter.               | in development |
+| `acc_predecoder`   | Accelerator-specific instruction predecoder.                       | in development |
