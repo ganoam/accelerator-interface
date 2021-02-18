@@ -5,10 +5,8 @@
 // Author: Noam Gallmann <gnoam@live.com>
 
 // Macros to assign accelerator interfaces and structs
-
 `ifndef ACC_ASSIGN_SVH_
 `define ACC_ASSIGN_SVH_
-
 
 // Assign handshake.
 `define ACC_ASSIGN_VALID(__opt_as, __dst, __src, __chan) \
@@ -53,7 +51,11 @@
   `ACC_ASSIGN_P_CHAN(assign, mst, slv, _, _) \
   `ACC_ASSIGN_HANDSHAKE(assign, mst, slv, p)
 
-  // Assign Q_channel signals with override.
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// Assign channel signals from one set of request/response struct to another,
+// substituting one signal with custom defined override signal
+//
+// Usage example: `ACC_ASSIGN_Q_SIGNALS(assign, slv_req_o.q, slv_req_q_chan, "id", sender_id);
 `define ACC_ASSIGN_Q_SIGNALS(__opt_as, dst, src,  ovr_name="none", ovr_sig='0)    \
   __opt_as dst.addr      = ``ovr_name`` == "addr" ? ovr_sig : src.addr;           \
   __opt_as dst.data_op   = ``ovr_name`` == "data_op" ? ovr_sig : src.data_op;     \
@@ -121,5 +123,54 @@
   `ACC_ASSIGN_VALID(assign, resp_struct, acc_if, p)
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
+
+///////////////////////////////////
+// Accelerator Adapter Interface //
+///////////////////////////////////
+
+// TODO: complete all assignment variants
+
+`define ACC_ADAPTER_ASSIGN_Q_CHAN(__opt_as, dst, src, __sep_dst, __sep_src) \
+  __opt_as dst.q``_sep_dst``instr    = src.q``_sep_src``instr;              \
+  __opt_as dst.q``_sep_dst``rs1      = src.q``_sep_src``rs1;                \
+  __opt_as dst.q``_sep_dst``rs2      = src.q``_sep_src``rs2;                \
+  __opt_as dst.q``_sep_dst``rs3      = src.q``_sep_src``rs3;                \
+  __opt_as dst.q``_sep_dst``rs_valid = src.q``_sep_src``rs_valid;
+
+`define ACC_ADAPTER_ASSIGN_K_CHAN(__opt_as, dst, src, __sep_dst, __sep_src) \
+  __opt_as dst.k``_sep_dst``accept    = src.k``_sep_src``accept;            \
+  __opt_as dst.k``_sep_dst``writeback = src.k``_sep_src``writeback;
+
+`define ACC_ADAPTER_ASSIGN(slv, mst)                  \
+   `ACC_ASSIGN_ADAPTER_Q_CHAN(assign, slv, mst, _, _) \
+   `ACC_ASSIGN_HANDSHAKE(assign, slv, mst, q)         \
+   `ACC_ASSIGN_ADAPTER_K_CHAN(assign, mst, slv, _, _) \
+   `ACC_ASSIGN_Q_CHAN(assign, mst, slv, _, _)         \
+   `ACC_ASSIGN_HANDSHAKE(assign, mst, slv, p)
+
+//////////////////////////////////////
+// Accelerator Predecoder Interface //
+//////////////////////////////////////
+
+// TODO: complete all assignment variants
+
+`define ACC_ADAPTER_ASSIGN_Q_CHAN(__opt_as, dst, src, __sep_dst, __sep_src) \
+  __opt_as dst.q``_sep_dst``instr    = src.q``_sep_src``instr;              \
+  __opt_as dst.q``_sep_dst``rs1      = src.q``_sep_src``rs1;                \
+  __opt_as dst.q``_sep_dst``rs2      = src.q``_sep_src``rs2;                \
+  __opt_as dst.q``_sep_dst``rs3      = src.q``_sep_src``rs3;                \
+  __opt_as dst.q``_sep_dst``rs_valid = src.q``_sep_src``rs_valid;
+
+`define ACC_ADAPTER_ASSIGN_K_CHAN(__opt_as, dst, src, __sep_dst, __sep_src) \
+  __opt_as dst.k``_sep_dst``accept    = src.k``_sep_src``accept;            \
+  __opt_as dst.k``_sep_dst``writeback = src.k``_sep_src``writeback;
+
+`define ACC_ADAPTER_ASSIGN(slv, mst)                  \
+   `ACC_ASSIGN_ADAPTER_Q_CHAN(assign, slv, mst, _, _) \
+   `ACC_ASSIGN_HANDSHAKE(assign, slv, mst, q)         \
+   `ACC_ASSIGN_ADAPTER_K_CHAN(assign, mst, slv, _, _) \
+   `ACC_ASSIGN_Q_CHAN(assign, mst, slv, _, _)         \
+   `ACC_ASSIGN_HANDSHAKE(assign, mst, slv, p)
+
 
 `endif
