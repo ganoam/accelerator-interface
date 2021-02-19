@@ -128,49 +128,114 @@
 // Accelerator Adapter Interface //
 ///////////////////////////////////
 
-// TODO: complete all assignment variants
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// Assigning one ACC_ADAPTER interface to another, as if you would do `assign slv =
+// mst;`
 
 `define ACC_ADAPTER_ASSIGN_Q_CHAN(__opt_as, dst, src, __sep_dst, __sep_src) \
-  __opt_as dst.q``_sep_dst``instr    = src.q``_sep_src``instr;              \
-  __opt_as dst.q``_sep_dst``rs1      = src.q``_sep_src``rs1;                \
-  __opt_as dst.q``_sep_dst``rs2      = src.q``_sep_src``rs2;                \
-  __opt_as dst.q``_sep_dst``rs3      = src.q``_sep_src``rs3;                \
-  __opt_as dst.q``_sep_dst``rs_valid = src.q``_sep_src``rs_valid;
+  __opt_as dst.q``__sep_dst``instr_data = src.q``__sep_src``instr_data;     \
+  __opt_as dst.q``__sep_dst``rs1        = src.q``__sep_src``rs1;            \
+  __opt_as dst.q``__sep_dst``rs2        = src.q``__sep_src``rs2;            \
+  __opt_as dst.q``__sep_dst``rs3        = src.q``__sep_src``rs3;            \
+  __opt_as dst.q``__sep_dst``rs_valid   = src.q``__sep_src``rs_valid;
 
 `define ACC_ADAPTER_ASSIGN_K_CHAN(__opt_as, dst, src, __sep_dst, __sep_src) \
-  __opt_as dst.k``_sep_dst``accept    = src.k``_sep_src``accept;            \
-  __opt_as dst.k``_sep_dst``writeback = src.k``_sep_src``writeback;
+  __opt_as dst.k``__sep_dst``accept    = src.k``__sep_src``accept;          \
+  __opt_as dst.k``__sep_dst``writeback = src.k``__sep_src``writeback;
+
+`define ACC_ADAPTER_ASSIGN_P_CHAN(__opt_as, dst, src, __sep_dst, __sep_src) \
+  `ACC_ASSIGN_P_CHAN(__opt_as, dst, src, __sep_dst, __sep_src)
 
 `define ACC_ADAPTER_ASSIGN(slv, mst)                  \
-   `ACC_ASSIGN_ADAPTER_Q_CHAN(assign, slv, mst, _, _) \
-   `ACC_ASSIGN_HANDSHAKE(assign, slv, mst, q)         \
-   `ACC_ASSIGN_ADAPTER_K_CHAN(assign, mst, slv, _, _) \
-   `ACC_ASSIGN_Q_CHAN(assign, mst, slv, _, _)         \
-   `ACC_ASSIGN_HANDSHAKE(assign, mst, slv, p)
+  `ACC_ADAPTER_ASSIGN_Q_CHAN(assign, slv, mst, _, _) \
+  `ACC_ASSIGN_HANDSHAKE(assign, slv, mst, q)         \
+  `ACC_ADAPTER_ASSIGN_K_CHAN(assign, mst, slv, _, _) \
+  `ACC_ASSIGN_P_CHAN(assign, mst, slv, _, _)         \
+  `ACC_ASSIGN_HANDSHAKE(assign, mst, slv, p)
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// Assigning an interface from channel or request/response structs outside a
+// process.
+
+`define ACC_ADAPTER_ASSIGN_FROM_REQ(acc_if, req_struct)        \
+  `ACC_ASSIGN_VALID(assign, acc_if, req_struct, q)             \
+  `ACC_ADAPTER_ASSIGN_Q_CHAN(assign, acc_if, req_struct, _, .) \
+  `ACC_ASSIGN_READY(assign, acc_if, req_struct, p)
+
+`define ACC_ADAPTER_ASSIGN_FROM_RESP(acc_if, resp_struct)       \
+  `ACC_ASSIGN_READY(assign, acc_if, resp_struct, q)             \
+  `ACC_ADAPTER_ASSIGN_P_CHAN(assign, acc_if, resp_struct, _, .) \
+  `ACC_ADAPTER_ASSIGN_K_CHAN(assign, acc_if, resp_struct, _, .) \
+  `ACC_ASSIGN_VALID(assign, acc_if, resp_struct, p)
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// Assigning channel or request/response structs from an interface outside a
+// process.
+`define ACC_ADAPTER_ASSIGN_TO_REQ(req_struct, acc_if)          \
+  `ACC_ASSIGN_VALID(assign, req_struct, acc_if, q)             \
+  `ACC_ADAPTER_ASSIGN_Q_CHAN(assign, req_struct, acc_if, ., _) \
+  `ACC_ASSIGN_READY(assign, req_struct, acc_if, p)
+
+`define ACC_ADAPTER_ASSIGN_TO_RESP(resp_struct, acc_if)         \
+  `ACC_ASSIGN_READY(assign, resp_struct, acc_if, q)             \
+  `ACC_ADAPTER_ASSIGN_P_CHAN(assign, resp_struct, acc_if, ., _) \
+  `ACC_ADAPTER_ASSIGN_K_CHAN(assign, resp_struct, acc_if, ., _) \
+  `ACC_ASSIGN_VALID(assign, resp_struct, acc_if, p)
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
 
 //////////////////////////////////////
 // Accelerator Predecoder Interface //
 //////////////////////////////////////
 
-// TODO: complete all assignment variants
+`define ACC_PREDECODER_ASSIGN_P_CHAN(__opt_as, dst, src, __sep_dst, __sep_src) \
+  __opt_as dst.p``__sep_dst``writeback = src.p``__sep_src``writeback;          \
+  __opt_as dst.p``__sep_dst``use_rs    = src.p``__sep_src``use_rs;             \
+  __opt_as dst.p``__sep_dst``op_a_mux  = src.p``__sep_src``op_a_mux;           \
+  __opt_as dst.p``__sep_dst``op_b_mux  = src.p``__sep_src``op_b_mux;           \
+  __opt_as dst.p``__sep_dst``op_c_mux  = src.p``__sep_src``op_c_mux;           \
+  __opt_as dst.p``__sep_dst``imm_a_mux = src.p``__sep_src``imm_a_mux;          \
+  __opt_as dst.p``__sep_dst``imm_b_mux = src.p``__sep_src``imm_b_mux;          \
+  __opt_as dst.p``__sep_dst``imm_c_mux = src.p``__sep_src``imm_c_mux;          \
+  __opt_as dst.p``__sep_dst``accept    = src.p``__sep_src``accept;
 
-`define ACC_ADAPTER_ASSIGN_Q_CHAN(__opt_as, dst, src, __sep_dst, __sep_src) \
-  __opt_as dst.q``_sep_dst``instr    = src.q``_sep_src``instr;              \
-  __opt_as dst.q``_sep_dst``rs1      = src.q``_sep_src``rs1;                \
-  __opt_as dst.q``_sep_dst``rs2      = src.q``_sep_src``rs2;                \
-  __opt_as dst.q``_sep_dst``rs3      = src.q``_sep_src``rs3;                \
-  __opt_as dst.q``_sep_dst``rs_valid = src.q``_sep_src``rs_valid;
 
-`define ACC_ADAPTER_ASSIGN_K_CHAN(__opt_as, dst, src, __sep_dst, __sep_src) \
-  __opt_as dst.k``_sep_dst``accept    = src.k``_sep_src``accept;            \
-  __opt_as dst.k``_sep_dst``writeback = src.k``_sep_src``writeback;
+`define ACC_PREDECODER_ASSIGN_Q_CHAN(__opt_as, dst, src, __sep_dst, __sep_src) \
+  __opt_as dst.q``__sep_dst``instr_data    = src.q``__sep_src``instr_data;
 
-`define ACC_ADAPTER_ASSIGN(slv, mst)                  \
-   `ACC_ASSIGN_ADAPTER_Q_CHAN(assign, slv, mst, _, _) \
-   `ACC_ASSIGN_HANDSHAKE(assign, slv, mst, q)         \
-   `ACC_ASSIGN_ADAPTER_K_CHAN(assign, mst, slv, _, _) \
-   `ACC_ASSIGN_Q_CHAN(assign, mst, slv, _, _)         \
-   `ACC_ASSIGN_HANDSHAKE(assign, mst, slv, p)
+`define ACC_PREDECODER_ASSIGN(slv, mst) \
+  `ACC_PREDECODER_ASSIGN_Q_CHAN(assign, slv, mst, _, _) \
+  `ACC_PREDECODER_ASSIGN_P_CHAN(assign, mst, slv, _, _)
+
+`define ACC_PREDECODER_ASSIGN_FROM_REQ(acc_if, req_struct) \
+  `ACC_PREDECODER_ASSIGN_Q_CHAN(assign, acc_if, req_struct, _, _)
+
+`define ACC_PREDECODER_ASSIGN_FROM_RESP(acc_if, resp_struct) \
+  `ACC_PREDECODER_ASSIGN_P_CHAN(assign, acc_if, resp_struct, _, _)
+
+`define ACC_PREDECODER_ASSIGN_TO_REQ(req_struct, acc_if) \
+  `ACC_PREDECODER_ASSIGN_Q_CHAN(assign, req_struct, acc_if, _, _)
+
+`define ACC_PREDECODER_ASSIGN_TO_RESP(resp_struct, acc_if) \
+  `ACC_PREDECODER_ASSIGN_P_CHAN(assign, resp_struct, acc_if, _, _)
+
+  /*
+`define ACC_PREDECODER_ASSIGN_FROM_REQ(acc_if, req_struct) \
+  `ACC_PREDECODER_ASSIGN_Q_CHAN(assign, acc_if, req_struct, _, .)
+
+`define ACC_PREDECODER_ASSIGN_FROM_RESP(acc_if, resp_struct) \
+  `ACC_PREDECODER_ASSIGN_P_CHAN(assign, acc_if, resp_struct, _, .)
+
+`define ACC_PREDECODER_ASSIGN_TO_REQ(req_struct, acc_if)  \
+  `ACC_PREDECODER_ASSIGN_Q_CHAN(assign, req_struct, acc_if, ., _)
+
+`define ACC_PREDECODER_ASSIGN_TO_RESP(resp_struct, acc_if)  \
+  `ACC_PREDECODER_ASSIGN_P_CHAN(assign, resp_struct, acc_if, ., _)
+
+  */
 
 
 `endif

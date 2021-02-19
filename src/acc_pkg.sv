@@ -17,7 +17,7 @@ package acc_pkg;
   endfunction
 
   function automatic int maxn (input int arr[], n);
-    return n == 0 ? arr[0] : max(arr[n-1], maxn(arr, n-1));
+    return n == 0 ? 0 : n == 1 ? arr[0] : max(arr[n-1], maxn(arr, n-1));
   endfunction
 
   function automatic int sum (input int a, b);
@@ -25,7 +25,7 @@ package acc_pkg;
   endfunction
 
   function automatic int sumn (input int arr[], n);
-    return n==0 ? arr[0] : sum(arr[n-1], sumn(arr, n-1));
+    return n == 0 ? 0 : n == 1 ? arr[0] : sum(arr[n-1], sumn(arr, n-1));
   endfunction
 
   typedef enum logic[1:0] {
@@ -43,16 +43,27 @@ package acc_pkg;
   } imm_sel_e;
 
   typedef struct packed {
+    logic          p_accept;
+    logic [1:0]    p_writeback;
+    logic [2:0]    p_use_rs;
+    op_sel_e       p_op_a_mux;
+    op_sel_e       p_op_b_mux;
+    op_sel_e       p_op_c_mux;
+    imm_sel_e      p_imm_a_mux;
+    imm_sel_e      p_imm_b_mux;
+    imm_sel_e      p_imm_c_mux;
+  } prd_rsp_t;
+
+  typedef struct packed {
+    logic [31:0] q_instr_data;
+  } prd_req_t;
+
+
+  typedef struct packed {
     logic [31:0]   instr_data;
     logic [31:0]   instr_mask;
-    logic [1:0]    writeback;
-    logic [2:0]    use_rs;
-    op_sel_e       op_a_mux;
-    op_sel_e       op_b_mux;
-    op_sel_e       op_c_mux;
-    imm_sel_e      imm_a_mux;
-    imm_sel_e      imm_b_mux;
-    imm_sel_e      imm_c_mux;
+    prd_rsp_t      prd_rsp;
   } offl_instr_t;
+
 
 endpackage

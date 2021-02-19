@@ -223,13 +223,13 @@ module acc_interconnect_tb  #(
   // the correct master.
   // Stop when all responses have been received.
   //
-  // TODO: This add possibility for no-response requests.
+  // TODO: Add possibility for no-response requests.
   //       For check if interconnect is correct, this is fine.
 
   // For each master check that each request sent has been received by
   // the correct slave.
   initial begin
-    automatic int nr_requests=0;
+    automatic int nr_requests = 0;
     @(posedge rst_n);
     for (int kk=0; kk<NumReq; kk++) begin // masters k
       automatic int k=kk;

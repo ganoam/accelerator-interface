@@ -6,12 +6,11 @@
 
 module acc_predecoder #(
   parameter int     NumInstr             = -1,
-  parameter acc_pkg::offl_instr_t offl_instr[NumInstr] = {-1}
+  parameter acc_pkg::offl_instr_t OfflInstr[NumInstr] = {-1}
 ) (
-  input  logic [31:0] instr_rdata_i,
-  output logic        offl_accept_o,
 
-  output acc_pkg::offl_instr_t offl_instr_o
+  input acc_pkg::prd_req_t prd_req_i,
+  output acc_pkg::prd_rsp_t prd_rsp_o
 );
 
   import acc_pkg::*;
@@ -21,30 +20,57 @@ module acc_predecoder #(
   imm_sel_e imm_c_mux;
 
   always_comb begin
-    offl_accept_o          = 1'b0;
-    offl_instr_o.writeback = '0;
-    offl_instr_o.use_rs    = '0;
-    offl_instr_o.op_a_mux  = OP_RS;
-    offl_instr_o.op_b_mux  = OP_RS;
-    offl_instr_o.op_c_mux  = OP_RS;
-    offl_instr_o.imm_a_mux = IMM_I;
-    offl_instr_o.imm_b_mux = IMM_I;
-    offl_instr_o.imm_c_mux = IMM_I;
+    prd_rsp_o.p_accept     = 1'b0;
+    prd_rsp_o.p_writeback = '0;
+    prd_rsp_o.p_use_rs    = '0;
+    prd_rsp_o.p_op_a_mux  = OP_RS;
+    prd_rsp_o.p_op_b_mux  = OP_RS;
+    prd_rsp_o.p_op_c_mux  = OP_RS;
+    prd_rsp_o.p_imm_a_mux = IMM_I;
+    prd_rsp_o.p_imm_b_mux = IMM_I;
+    prd_rsp_o.p_imm_c_mux = IMM_I;
     for (int unsigned i = 0; i<NumInstr; i++) begin
-      if ((offl_instr[i].instr_mask & instr_rdata_i) == offl_instr[i].instr_data) begin
-        offl_accept_o          = 1'b1;
-        offl_instr_o.writeback = offl_instr[i].writeback;
-        offl_instr_o.use_rs    = offl_instr[i].use_rs;
-        offl_instr_o.op_a_mux  = offl_instr[i].op_a_mux;
-        offl_instr_o.op_b_mux  = offl_instr[i].op_b_mux;
-        offl_instr_o.op_c_mux  = offl_instr[i].op_c_mux;
-        offl_instr_o.imm_a_mux = offl_instr[i].imm_a_mux;
-        offl_instr_o.imm_b_mux = offl_instr[i].imm_b_mux;
-        offl_instr_o.imm_c_mux = offl_instr[i].imm_c_mux;
+      if ((OfflInstr[i].instr_mask & prd_req_i.q_instr_data) == OfflInstr[i].instr_data) begin
+        prd_rsp_o.p_accept    = 1'b1;
+        prd_rsp_o.p_writeback = OfflInstr[i].prd_rsp.p_writeback;
+        prd_rsp_o.p_use_rs    = OfflInstr[i].prd_rsp.p_use_rs;
+        prd_rsp_o.p_op_a_mux  = OfflInstr[i].prd_rsp.p_op_a_mux;
+        prd_rsp_o.p_op_b_mux  = OfflInstr[i].prd_rsp.p_op_b_mux;
+        prd_rsp_o.p_op_c_mux  = OfflInstr[i].prd_rsp.p_op_c_mux;
+        prd_rsp_o.p_imm_a_mux = OfflInstr[i].prd_rsp.p_imm_a_mux;
+        prd_rsp_o.p_imm_b_mux = OfflInstr[i].prd_rsp.p_imm_b_mux;
+        prd_rsp_o.p_imm_c_mux = OfflInstr[i].prd_rsp.p_imm_c_mux;
         break;
       end
     end
   end
+
+endmodule
+
+
+`include "acc_interface/assign.svh"
+
+module acc_predecoder_intf #(
+  parameter int NumInstr = -1,
+  parameter acc_pkg::offl_instr_t OfflInstr[NumInstr] = {-1}
+) (
+  ACC_PREDECODER_BUS prd
+);
+
+  acc_pkg::prd_req_t prd_req;
+  acc_pkg::prd_rsp_t prd_rsp;
+
+  `ACC_PREDECODER_ASSIGN_TO_RESP(prd_rsp, prd)
+  `ACC_PREDECODER_ASSIGN_FROM_REQ(prd, prd_req)
+
+
+  acc_predecoder #(
+    .NumInstr  ( NumInstr  ),
+    .OfflInstr ( OfflInstr )
+  ) acc_predecoder_i (
+    .prd_req_i(prd_req),
+    .prd_rsp_o(prd_rsp)
+  );
 
 endmodule
 
