@@ -60,7 +60,9 @@ package acc_test;
     parameter int DataWidth    = -1,
     parameter int IdWidth      = -1
   );
-    rand logic [DataWidth-1:0] data;
+    rand logic [DataWidth-1:0] data0;
+    rand logic [DataWidth-1:0] data1;
+    rand logic                 dual_writeback;
     rand logic                 error;
     logic [IdWidth-1:0]        id;
 
@@ -71,9 +73,11 @@ package acc_test;
 
     task display;
       $display(
-              "rsp.data: %x\n"         , data ,
-              "rsp.error %x\n"         , error     ,
-              "rsp.id: %x\n"           , id,
+              "rsp.data0: %x\n",          data0,
+              "rsp.data1: %x\n",          data1,
+              "rsp.dual_writeback: %x\n", dual_writeback,
+              "rsp.error %x\n",           error,
+              "rsp.id: %x\n",             id,
               "\n"
             );
     endtask
@@ -87,9 +91,11 @@ package acc_test;
     parameter type slv_rsp_t = logic
   );
     static function do_compare(mst_rsp_t mst_rsp, slv_rsp_t slv_rsp);
-      return mst_rsp.data    == slv_rsp.data  &
-             mst_rsp.error   == slv_rsp.error &
-             mst_rsp.id[4:0] == slv_rsp.id[4:0];
+      return mst_rsp.data0          == slv_rsp.data0          &
+             mst_rsp.data1          == slv_rsp.data1          &
+             mst_rsp.dual_writeback == slv_rsp.dual_writeback &
+             mst_rsp.error          == slv_rsp.error          &
+             mst_rsp.id[4:0]        == slv_rsp.id[4:0];
     endfunction
   endclass
 
@@ -98,7 +104,6 @@ package acc_test;
     parameter int AddrWidth    = -1,
     parameter int DataWidth    = -1,
     parameter int IdWidth      = -1,
-    parameter int NumRsp       = -1,
     parameter time TA          = 0, // stimuli application time
     parameter time TT          = 0  // stimuli test time
   );
@@ -142,11 +147,12 @@ package acc_test;
     endtask
 
     task reset_slave;
-      bus.p_data  <= '0;
-      bus.p_id    <= '0;
-      bus.p_error <= '0;
-      bus.p_valid <= '0;
-      bus.q_ready <= '0;
+      bus.p_data0  <= '0;
+      bus.p_data1  <= '0;
+      bus.p_id     <= '0;
+      bus.p_error  <= '0;
+      bus.p_valid  <= '0;
+      bus.q_ready  <= '0;
     endtask
 
     task cycle_start;
@@ -180,17 +186,21 @@ package acc_test;
 
     // Send a response.
     task send_rsp(input int_rsp_t rsp);
-      bus.p_data  <= #TA rsp.data;
-      bus.p_id    <= #TA rsp.id;
-      bus.p_error <= #TA rsp.error;
-      bus.p_valid <= #TA 1;
+      bus.p_data0          <= #TA rsp.data0;
+      bus.p_data1          <= #TA rsp.data1;
+      bus.p_dual_writeback <= #TA rsp.dual_writeback;
+      bus.p_id             <= #TA rsp.id;
+      bus.p_error          <= #TA rsp.error;
+      bus.p_valid          <= #TA 1;
       cycle_start();
       while (bus.p_ready != 1) begin cycle_end(); cycle_start(); end
       cycle_end();
-      bus.p_data  <= #TA '0;
-      bus.p_id    <= #TA '0;
-      bus.p_error <= #TA '0;
-      bus.p_valid <= #TA 0;
+      bus.p_data0          <= #TA '0;
+      bus.p_data1          <= #TA '0;
+      bus.p_dual_writeback <= #TA '0;
+      bus.p_id             <= #TA '0;
+      bus.p_error          <= #TA '0;
+      bus.p_valid          <= #TA 0;
     endtask
 
     // Receive a request.
@@ -215,7 +225,9 @@ package acc_test;
       cycle_start();
       while (bus.p_valid != 1) begin cycle_end(); cycle_start(); end
       rsp       = new;
-      rsp.data  = bus.p_data;
+      rsp.data0  = bus.p_data0;
+      rsp.data1  = bus.p_data1;
+      rsp.dual_writeback  = bus.p_dual_writeback;
       rsp.error = bus.p_error;
       rsp.id    = bus.p_id;
       cycle_end();
@@ -240,10 +252,12 @@ package acc_test;
     task mon_rsp (output int_rsp_t rsp);
       cycle_start();
       while (!(bus.p_valid &&bus.p_ready)) begin cycle_end(); cycle_start(); end
-      rsp       = new;
-      rsp.data  = bus.p_data;
-      rsp.error = bus.p_error;
-      rsp.id    = bus.p_id;
+      rsp                = new;
+      rsp.data0          = bus.p_data0;
+      rsp.data1          = bus.p_data1;
+      rsp.dual_writeback = bus.p_dual_writeback;
+      rsp.error          = bus.p_error;
+      rsp.id             = bus.p_id;
       cycle_end();
     endtask
 
@@ -255,7 +269,6 @@ package acc_test;
     parameter int DataWidth    = -1,
     parameter int AddrWidth    = -1,
     parameter int IdWidth      = -1,
-    parameter int NumRsp       = -1, // TODO: Remove unused parameter
 
     // Stimuli application and test time
     parameter time TA = 0ps,
@@ -396,8 +409,6 @@ package acc_test;
     parameter int AddrWidth    = -1,
     parameter int DataWidth    = -1,
     parameter int IdWidth      = -1,
-    parameter int NumRsp       = -1,
-    parameter int NumReq       = -1,
     // Stimuli application and test time
     parameter time  TA = 0ps,
     parameter time  TT = 0ps,
@@ -410,13 +421,12 @@ package acc_test;
       .AddrWidth ( AddrWidth ),
       .DataWidth ( DataWidth ),
       .IdWidth   ( IdWidth   ),
-      .NumRsp    ( NumRsp    ),
       // Stimuli application and test time
       .TA(TA),
       .TT(TT)
     );
 
-    mailbox req_mbx[NumReq];
+    mailbox req_mbx[2**IdWidth];
 
     /// Reset the driver.
     task reset();
@@ -446,7 +456,7 @@ package acc_test;
         automatic int_req_t req;
         rand_wait(REQ_MIN_WAIT_CYCLES, REQ_MAX_WAIT_CYCLES);
         this.drv.recv_req(req);
-        req_mbx[req.id[IdWidth-1:5]].put(req);
+        req_mbx[req.id].put(req);
       end
     endtask
 
@@ -455,14 +465,14 @@ package acc_test;
         automatic int_rsp_t rsp = new;
         automatic int_req_t req;
         // generate random sequence of requesters.
-        automatic int req_id[NumReq];
+        automatic int req_id[2**IdWidth];
         automatic bit req_found = 1'b0;
-        for (int i =0; i<NumReq; i++) begin
+        // randomly pick a request
+        for (int i =0; i<2**IdWidth; i++) begin
           req_id[i] = i;
         end
         req_id.shuffle();
-        // Try to respond to first requester. If mbx is empty, try next.
-        for (int i=0; i<NumReq; i++) begin
+        for (int i=0; i<2**IdWidth; i++) begin
           automatic int r_id = req_id[i];
           if (req_mbx[r_id].num() != 0) begin
             req_mbx[r_id].get(req);
@@ -471,6 +481,7 @@ package acc_test;
           end
         end
         if (req_found==1'b1) begin
+          // generate and send random response.
           assert(rsp.randomize());
           rsp.id = req.id;
 
@@ -491,7 +502,6 @@ package acc_test;
     parameter int AddrWidth    = -1,
     parameter int IdWidth      = -1,
     parameter int NumReq       = -1,
-    parameter int NumRsp       = -1,
     // Stimuli application and test time
     parameter time  TA = 0ps,
     parameter time  TT = 0ps
@@ -499,7 +509,6 @@ package acc_test;
         .DataWidth    ( DataWidth    ),
         .AddrWidth    ( AddrWidth    ),
         .IdWidth      ( IdWidth      ),
-        .NumRsp       ( NumRsp       ),
         .TA           ( TA           ),
         .TT           ( TT           )
   );
@@ -544,7 +553,6 @@ package acc_test;
     // Acc interface parameters
     parameter int DataWidth    = -1,
     parameter int AddrWidth    = -1,
-    parameter int NumRsp       = -1,
     parameter int IdWidth      = -1,
     // Stimuli application and test time
     parameter time  TA = 0ps,
@@ -553,7 +561,6 @@ package acc_test;
         .DataWidth    ( DataWidth    ),
         .AddrWidth    ( AddrWidth    ),
         .IdWidth      ( IdWidth      ),
-        .NumRsp       ( NumRsp       ),
         .TA           ( TA           ),
         .TT           ( TT           )
     );

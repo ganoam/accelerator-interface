@@ -96,7 +96,6 @@ module acc_cluster_interconnect_tb  #(
     .DataWidth ( DataWidth ),
     .AddrWidth ( AddrWidth ),
     .IdWidth   ( 5         ),
-    .NumRsp    ( MaxNumRsp ),
     // Stimuli application and test time
     .TA ( ApplTime ),
     .TT ( TestTime )
@@ -164,7 +163,6 @@ module acc_cluster_interconnect_tb  #(
         .DataWidth ( DataWidth  ),
         .AddrWidth ( AddrWidth  ),
         .IdWidth   ( ExtIdWidth ),
-        .NumRsp    ( NumRsp[j]  ), //TODO: Remove unused parameter
         .NumReq    ( NumReq[j]  ),
         // Stimuli application and test time
         .TA ( ApplTime ),
@@ -177,8 +175,6 @@ module acc_cluster_interconnect_tb  #(
         .DataWidth ( DataWidth  ),
         .AddrWidth ( AddrWidth  ),
         .IdWidth   ( ExtIdWidth ),
-        .NumRsp    ( NumRsp[j]  ), //TODO: Remove unused parameter
-        .NumReq    ( NumReq[j]  ),
         // Stimuli application and test time
         .TA ( ApplTime ),
         .TT ( TestTime )

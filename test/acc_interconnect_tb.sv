@@ -118,7 +118,6 @@ module acc_interconnect_tb  #(
     .DataWidth ( DataWidth  ),
     .AddrWidth ( AddrWidth  ),
     .IdWidth   ( ExtIdWidth ),
-    .NumRsp    ( NumRsp     ),
     .NumReq    ( NumReq     ),
     // Stimuli application and test time
     .TA ( ApplTime ),
@@ -130,7 +129,6 @@ module acc_interconnect_tb  #(
     .DataWidth ( DataWidth ),
     .AddrWidth ( AddrWidth ),
     .IdWidth   ( 5         ),
-    .NumRsp    ( NumRsp    ),
     // Stimuli application and test time
     .TA ( ApplTime ),
     .TT ( TestTime )
@@ -163,8 +161,6 @@ module acc_interconnect_tb  #(
     .DataWidth ( DataWidth  ),
     .AddrWidth ( AddrWidth  ),
     .IdWidth   ( ExtIdWidth ),
-    .NumRsp    ( NumRsp     ),
-    .NumReq    ( NumReq     ),
     // Stimuli application and test time
     .TA ( ApplTime ),
     .TT ( TestTime )

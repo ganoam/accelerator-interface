@@ -26,8 +26,10 @@
 
 `define ACC_TYPEDEF_RSP_CHAN_T(__rsp_chan_t, __data_t, __id_t ) \
   typedef struct packed {                                       \
-    __data_t data;                                              \
+    __data_t data0;                                             \
+    __data_t data1;                                             \
     logic    error;                                             \
+    logic    dual_writeback;                                    \
     __id_t   id;                                                \
   } __rsp_chan_t;
 

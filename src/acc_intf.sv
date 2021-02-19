@@ -31,30 +31,32 @@ interface ACC_BUS #(
   typedef logic [IdWidth-1:0]   id_t;
 
   // Request channel (Q).
-  addr_t                      q_addr;
-  logic [31:0]                q_data_op;
-  data_t                      q_data_arga;
-  data_t                      q_data_argb;
-  data_t                      q_data_argc;
-  id_t                        q_id;
-  logic                       q_valid;
-  logic                       q_ready;
+  addr_t       q_addr;
+  logic [31:0] q_data_op;
+  data_t       q_data_arga;
+  data_t       q_data_argb;
+  data_t       q_data_argc;
+  id_t         q_id;
+  logic        q_valid;
+  logic        q_ready;
 
   // Response Channel (P).
-  data_t                  p_data;
-  id_t                    p_id;
-  logic                   p_error;
-  logic                   p_valid;
-  logic                   p_ready;
+  data_t p_data0;
+  data_t p_data1;
+  logic  p_dual_writeback;
+  id_t   p_id;
+  logic  p_error;
+  logic  p_valid;
+  logic  p_ready;
 
   modport in (
     input  q_addr, q_data_op, q_data_arga, q_data_argb, q_data_argc, q_id, q_valid, p_ready,
-    output q_ready, p_data, p_id, p_error, p_valid
+    output q_ready, p_data0, p_data1, p_dual_writeback, p_id, p_error, p_valid
   );
 
   modport out (
     output q_addr, q_data_op, q_data_arga, q_data_argb, q_data_argc, q_id, q_valid, p_ready,
-    input  q_ready, p_data, p_id, p_error, p_valid
+    input  q_ready, p_data0, p_data1, p_dual_writeback, p_id, p_error, p_valid
   );
 
 
@@ -86,7 +88,9 @@ interface ACC_BUS_DV #(
   logic        q_ready;
 
   // Response Channel (P).
-  data_t p_data;
+  data_t p_data0;
+  data_t p_data1;
+  logic  p_dual_writeback;
   id_t   p_id;
   logic  p_error;
   logic  p_valid;
@@ -94,17 +98,17 @@ interface ACC_BUS_DV #(
 
   modport in (
     input  q_addr, q_data_op, q_data_arga, q_data_argb, q_data_argc, q_id, q_valid, p_ready,
-    output q_ready, p_data, p_id, p_error, p_valid
+    output q_ready, p_data0, p_data1, p_dual_writeback, p_id, p_error, p_valid
   );
 
   modport out (
     output q_addr, q_data_op, q_data_arga, q_data_argb, q_data_argc, q_id, q_valid, p_ready,
-    input  q_ready, p_data, p_id, p_error, p_valid
+    input  q_ready, p_data0, p_data1, p_dual_writeback, p_id, p_error, p_valid
   );
 
   modport monitor (
     input  q_addr, q_data_op, q_data_arga, q_data_argb, q_data_argc, q_id, q_valid, p_ready,
-    input  q_ready, p_data, p_id, p_error, p_valid
+    input  q_ready, p_data0, p_data1, p_dual_writeback, p_id, p_error, p_valid
   );
 
   // pragma translate_off
@@ -117,7 +121,9 @@ interface ACC_BUS_DV #(
   assert property (@(posedge clk_i) (q_valid && !q_ready |=> $stable(q_id)));
   assert property (@(posedge clk_i) (q_valid && !q_ready |=> q_valid));
 
-  assert property (@(posedge clk_i) (p_valid && !p_ready |=> $stable(p_data)));
+  assert property (@(posedge clk_i) (p_valid && !p_ready |=> $stable(p_data0)));
+  assert property (@(posedge clk_i) (p_valid && !p_ready |=> $stable(p_data1)));
+  assert property (@(posedge clk_i) (p_valid && !p_ready |=> $stable(p_dual_writeback)));
   assert property (@(posedge clk_i) (p_valid && !p_ready |=> $stable(p_id)));
   assert property (@(posedge clk_i) (p_valid && !p_ready |=> $stable(p_error)));
   assert property (@(posedge clk_i) (p_valid && !p_ready |=> p_valid));
