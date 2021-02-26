@@ -28,30 +28,10 @@ package acc_pkg;
     return n == 0 ? 0 : n == 1 ? arr[0] : sum(arr[n-1], sumn(arr, n-1));
   endfunction
 
-  typedef enum logic[1:0] {
-    OP_RS,
-    OP_IMM
-  } op_sel_e;
-
-  // Immediate b selection
-  typedef enum logic [2:0] {
-    IMM_I,
-    IMM_S,
-    IMM_B,
-    IMM_U,
-    IMM_J
-  } imm_sel_e;
-
   typedef struct packed {
     logic          p_accept;
     logic [1:0]    p_writeback;
     logic [2:0]    p_use_rs;
-    op_sel_e       p_op_a_mux;
-    op_sel_e       p_op_b_mux;
-    op_sel_e       p_op_c_mux;
-    imm_sel_e      p_imm_a_mux;
-    imm_sel_e      p_imm_b_mux;
-    imm_sel_e      p_imm_c_mux;
   } prd_rsp_t;
 
   typedef struct packed {

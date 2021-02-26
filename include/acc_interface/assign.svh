@@ -208,12 +208,6 @@
 `define ACC_PREDECODER_ASSIGN_P_CHAN(__opt_as, dst, src, __sep_dst, __sep_src) \
   __opt_as dst.p``__sep_dst``writeback = src.p``__sep_src``writeback;          \
   __opt_as dst.p``__sep_dst``use_rs    = src.p``__sep_src``use_rs;             \
-  __opt_as dst.p``__sep_dst``op_a_mux  = src.p``__sep_src``op_a_mux;           \
-  __opt_as dst.p``__sep_dst``op_b_mux  = src.p``__sep_src``op_b_mux;           \
-  __opt_as dst.p``__sep_dst``op_c_mux  = src.p``__sep_src``op_c_mux;           \
-  __opt_as dst.p``__sep_dst``imm_a_mux = src.p``__sep_src``imm_a_mux;          \
-  __opt_as dst.p``__sep_dst``imm_b_mux = src.p``__sep_src``imm_b_mux;          \
-  __opt_as dst.p``__sep_dst``imm_c_mux = src.p``__sep_src``imm_c_mux;          \
   __opt_as dst.p``__sep_dst``accept    = src.p``__sep_src``accept;
 
 
@@ -235,21 +229,5 @@
 
 `define ACC_PREDECODER_ASSIGN_TO_RESP(resp_struct, acc_if) \
   `ACC_PREDECODER_ASSIGN_P_CHAN(assign, resp_struct, acc_if, _, _)
-
-  /*
-`define ACC_PREDECODER_ASSIGN_FROM_REQ(acc_if, req_struct) \
-  `ACC_PREDECODER_ASSIGN_Q_CHAN(assign, acc_if, req_struct, _, .)
-
-`define ACC_PREDECODER_ASSIGN_FROM_RESP(acc_if, resp_struct) \
-  `ACC_PREDECODER_ASSIGN_P_CHAN(assign, acc_if, resp_struct, _, .)
-
-`define ACC_PREDECODER_ASSIGN_TO_REQ(req_struct, acc_if)  \
-  `ACC_PREDECODER_ASSIGN_Q_CHAN(assign, req_struct, acc_if, ., _)
-
-`define ACC_PREDECODER_ASSIGN_TO_RESP(resp_struct, acc_if)  \
-  `ACC_PREDECODER_ASSIGN_P_CHAN(assign, resp_struct, acc_if, ., _)
-
-  */
-
 
 `endif

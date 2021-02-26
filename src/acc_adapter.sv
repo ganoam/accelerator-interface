@@ -64,19 +64,9 @@ module acc_adapter #(
 
   logic [4:0] instr_rd;
 
-  logic [31:0] imm_i_type;
-  logic [31:0] imm_s_type;
-  logic [31:0] imm_b_type;
-  logic [31:0] imm_u_type;
-  logic [31:0] imm_j_type;
-
   logic [NumRspTot-1:0][31:0] acc_op_a;
   logic [NumRspTot-1:0][31:0] acc_op_b;
   logic [NumRspTot-1:0][31:0] acc_op_c;
-
-  logic [NumRspTot-1:0][31:0] acc_imm_a;
-  logic [NumRspTot-1:0][31:0] acc_imm_b;
-  logic [NumRspTot-1:0][31:0] acc_imm_c;
 
 
   logic [2:0] use_rs;
@@ -86,7 +76,7 @@ module acc_adapter #(
   logic [NumRspTot-1:0] predecoder_accept_onehot;
 
   for (genvar i=0; i<NumRspTot; i++) begin : gen_acc_predecoder_sig_assign
-    assign predecoder_accept_onehot[i]    = predecoder_rsp_i[i].p_accept;
+    assign predecoder_accept_onehot[i]      = predecoder_rsp_i[i].p_accept;
     assign predecoder_req_o[i].q_instr_data = adapter_req_i.q.instr_data;
   end
 
@@ -100,55 +90,16 @@ module acc_adapter #(
   // Destination register
   assign instr_rd = instr_rdata_id[11:7];
 
-  // Immediate extraction and sign extension
-  assign imm_i_type = { {20{instr_rdata_id[31]}}, instr_rdata_id[31:20] };
-  assign imm_s_type =
-    { {20{instr_rdata_id[31]}}, instr_rdata_id[31:25], instr_rdata_id[11:7] };
-  assign imm_b_type =
-    { {19{instr_rdata_id[31]}}, instr_rdata_id[31], instr_rdata_id[7],
-          instr_rdata_id[30:25], instr_rdata_id[11:8], 1'b0 };
-  assign imm_u_type = { instr_rdata_id[31:12], 12'b0 };
-  assign imm_j_type =
-    { {12{instr_rdata_id[31]}}, instr_rdata_id[19:12], instr_rdata_id[20],
-          instr_rdata_id[30:21], 1'b0 };
-
   // operand muxes
   for (genvar i=0; i<NumRspTot; i++) begin : gen_op_mux
     always_comb begin
       acc_op_a[i] = '0;
       acc_op_b[i] = '0;
       acc_op_c[i] = '0;
-      acc_imm_a[i] = imm_i_type;
-      acc_imm_b[i] = imm_i_type;
-      acc_imm_c[i] = imm_i_type;
-      unique case (predecoder_rsp_i[i].p_imm_a_mux)
-        IMM_I:   acc_imm_a[i] = imm_i_type;
-        IMM_S:   acc_imm_a[i] = imm_s_type;
-        IMM_B:   acc_imm_a[i] = imm_b_type;
-        IMM_U:   acc_imm_a[i] = imm_u_type;
-        IMM_J:   acc_imm_a[i] = imm_j_type;
-        default: acc_imm_a[i] = imm_i_type;
-      endcase
-      unique case (predecoder_rsp_i[i].p_imm_b_mux)
-        IMM_I:   acc_imm_b[i] = imm_i_type;
-        IMM_S:   acc_imm_b[i] = imm_s_type;
-        IMM_B:   acc_imm_b[i] = imm_b_type;
-        IMM_U:   acc_imm_b[i] = imm_u_type;
-        IMM_J:   acc_imm_b[i] = imm_j_type;
-        default: acc_imm_b[i] = imm_i_type;
-      endcase
-      unique case (predecoder_rsp_i[i].p_imm_c_mux)
-        IMM_I:   acc_imm_c[i] = imm_i_type;
-        IMM_S:   acc_imm_c[i] = imm_s_type;
-        IMM_B:   acc_imm_c[i] = imm_b_type;
-        IMM_U:   acc_imm_c[i] = imm_u_type;
-        IMM_J:   acc_imm_c[i] = imm_j_type;
-        default: acc_imm_c[i] = imm_i_type;
-      endcase
       if (predecoder_accept_onehot[i]) begin
-        acc_op_a[i] = predecoder_rsp_i[i].p_op_a_mux == OP_RS ? adapter_req_i.q.rs1 : acc_imm_a[i];
-        acc_op_b[i] = predecoder_rsp_i[i].p_op_b_mux == OP_RS ? adapter_req_i.q.rs2: acc_imm_b[i];
-        acc_op_c[i] = predecoder_rsp_i[i].p_op_c_mux == OP_RS ? adapter_req_i.q.rs3: acc_imm_c[i];
+        acc_op_a[i] = predecoder_rsp_i[i].p_use_rs[0] ? adapter_req_i.q.rs1 : '0;
+        acc_op_b[i] = predecoder_rsp_i[i].p_use_rs[1] ? adapter_req_i.q.rs2 : '0;
+        acc_op_c[i] = predecoder_rsp_i[i].p_use_rs[2] ? adapter_req_i.q.rs3 : '0;
       end
     end
   end
@@ -206,7 +157,6 @@ module acc_adapter #(
 
   assign acc_out_fifo_req.addr = {hier_addr, addr_lsb};
 
-
   // Operands
   always_comb begin
     acc_out_fifo_req.data_arga = '0;
@@ -218,8 +168,10 @@ module acc_adapter #(
       acc_out_fifo_req.data_arga |= predecoder_accept_onehot[i] ? acc_op_a[i] : '0;
       acc_out_fifo_req.data_argb |= predecoder_accept_onehot[i] ? acc_op_b[i] : '0;
       acc_out_fifo_req.data_argc |= predecoder_accept_onehot[i] ? acc_op_c[i] : '0;
-      use_rs                     |= predecoder_accept_onehot[i] ? predecoder_rsp_i[i].p_use_rs    : '0;
-      adapter_rsp_o.k.writeback  |= predecoder_accept_onehot[i] ? predecoder_rsp_i[i].p_writeback : '0;
+      use_rs                     |=
+        predecoder_accept_onehot[i] ? predecoder_rsp_i[i].p_use_rs    : '0;
+      adapter_rsp_o.k.writeback  |=
+        predecoder_accept_onehot[i] ? predecoder_rsp_i[i].p_writeback : '0;
     end
   end
 
@@ -235,8 +187,10 @@ module acc_adapter #(
   assign sources_valid = (use_rs ~^ adapter_req_i.q.rs_valid | ~use_rs) == '1;
 
   assign adapter_rsp_o.k.accept = |predecoder_accept_onehot;
-  assign acc_out_fifo_valid     = adapter_req_i.q_valid && sources_valid && |predecoder_accept_onehot;
-  assign adapter_rsp_o.q_ready  = ~adapter_rsp_o.k.accept || (sources_valid && acc_out_fifo_ready);
+  assign acc_out_fifo_valid     =
+    adapter_req_i.q_valid && sources_valid && |predecoder_accept_onehot;
+  assign adapter_rsp_o.q_ready  =
+    ~adapter_rsp_o.k.accept || (sources_valid && acc_out_fifo_ready);
 
   // Forward accelerator response
   assign adapter_rsp_o.p       = acc_rsp_i.p;
@@ -323,7 +277,6 @@ module acc_adapter_intf #(
   acc_req_t         acc_req;
   acc_rsp_t         acc_rsp;
 
-  // TODO: ADAPT
   acc_adapter #(
     .DataWidth         ( DataWidth         ),
     .NumHier           ( NumHier           ),
@@ -354,6 +307,5 @@ module acc_adapter_intf #(
     `ACC_PREDECODER_ASSIGN_FROM_REQ(prd[i], acc_predecoder_req[i])
     `ACC_PREDECODER_ASSIGN_TO_RESP(acc_predecoder_rsp[i], prd[i])
   end
-
 
 endmodule

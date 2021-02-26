@@ -5,7 +5,7 @@
 // Noam Gallmann <gnoam@live.com>
 
 module acc_predecoder #(
-  parameter int     NumInstr             = -1,
+  parameter int     NumInstr                          = -1,
   parameter acc_pkg::offl_instr_t OfflInstr[NumInstr] = {-1}
 ) (
 
@@ -15,33 +15,28 @@ module acc_predecoder #(
 
   import acc_pkg::*;
 
-  imm_sel_e imm_a_mux;
-  imm_sel_e imm_b_mux;
-  imm_sel_e imm_c_mux;
+  prd_rsp_t [NumInstr-1:0] instr_rsp;
+  logic [NumInstr-1:0]     instr_sel;
+
+  for (genvar i=0; i<NumInstr; i++) begin : gen_predecoder_selector
+    assign instr_sel[i] =
+      ((OfflInstr[i].instr_mask & prd_req_i.q_instr_data) == OfflInstr[i].instr_data);
+  end
+
+  for ( genvar i=0; i<NumInstr; i++) begin : gen_predecoder_mux
+      assign instr_rsp[i].p_accept    = instr_sel[i] ? 1'b1 : 1'b0;
+      assign instr_rsp[i].p_writeback = instr_sel[i] ? OfflInstr[i].prd_rsp.p_writeback : '0;
+      assign instr_rsp[i].p_use_rs    = instr_sel[i] ? OfflInstr[i].prd_rsp.p_use_rs : '0;
+  end
 
   always_comb begin
-    prd_rsp_o.p_accept     = 1'b0;
+    prd_rsp_o.p_accept    = 1'b0;
     prd_rsp_o.p_writeback = '0;
     prd_rsp_o.p_use_rs    = '0;
-    prd_rsp_o.p_op_a_mux  = OP_RS;
-    prd_rsp_o.p_op_b_mux  = OP_RS;
-    prd_rsp_o.p_op_c_mux  = OP_RS;
-    prd_rsp_o.p_imm_a_mux = IMM_I;
-    prd_rsp_o.p_imm_b_mux = IMM_I;
-    prd_rsp_o.p_imm_c_mux = IMM_I;
-    for (int unsigned i = 0; i<NumInstr; i++) begin
-      if ((OfflInstr[i].instr_mask & prd_req_i.q_instr_data) == OfflInstr[i].instr_data) begin
-        prd_rsp_o.p_accept    = 1'b1;
-        prd_rsp_o.p_writeback = OfflInstr[i].prd_rsp.p_writeback;
-        prd_rsp_o.p_use_rs    = OfflInstr[i].prd_rsp.p_use_rs;
-        prd_rsp_o.p_op_a_mux  = OfflInstr[i].prd_rsp.p_op_a_mux;
-        prd_rsp_o.p_op_b_mux  = OfflInstr[i].prd_rsp.p_op_b_mux;
-        prd_rsp_o.p_op_c_mux  = OfflInstr[i].prd_rsp.p_op_c_mux;
-        prd_rsp_o.p_imm_a_mux = OfflInstr[i].prd_rsp.p_imm_a_mux;
-        prd_rsp_o.p_imm_b_mux = OfflInstr[i].prd_rsp.p_imm_b_mux;
-        prd_rsp_o.p_imm_c_mux = OfflInstr[i].prd_rsp.p_imm_c_mux;
-        break;
-      end
+    for (int unsigned i=0; i<NumInstr; i++) begin
+      prd_rsp_o.p_accept    |= instr_rsp[i].p_accept;
+      prd_rsp_o.p_writeback |= instr_rsp[i].p_writeback;
+      prd_rsp_o.p_use_rs    |= instr_rsp[i].p_use_rs;
     end
   end
 

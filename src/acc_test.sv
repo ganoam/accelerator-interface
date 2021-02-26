@@ -1068,24 +1068,12 @@ package acc_test;
     rand logic       accept;
     rand logic [1:0] writeback;
     rand logic [2:0] use_rs;
-    rand op_sel_e    op_a_mux;
-    rand op_sel_e    op_b_mux;
-    rand op_sel_e    op_c_mux;
-    rand imm_sel_e   imm_a_mux;
-    rand imm_sel_e   imm_b_mux;
-    rand imm_sel_e   imm_c_mux;
 
     task display;
       $display(
               "prd_rsp.accept: %0d\n", accept,
               "prd_rsp.writeback: %0d\n", writeback,
               "prd_rsp.use_rs: %0d\n", use_rs,
-              "prd_rsp.op_a_mux: %s\n", op_a_mux,
-              "prd_rsp.op_b_mux: %s\n", op_b_mux,
-              "prd_rsp.op_c_mux: %s\n", op_c_mux,
-              "prd_rsp.imm_a_mux: %s\n", imm_a_mux,
-              "prd_rsp.imm_b_mux: %s\n", imm_b_mux,
-              "prd_rsp.imm_c_mux: %s\n", imm_c_mux,
               "\n"
               );
     endtask
@@ -1115,12 +1103,6 @@ package acc_test;
       bus.p_accept    <= '0;
       bus.p_writeback <= '0;
       bus.p_use_rs    <= '0;
-      bus.p_op_a_mux  <= OP_RS;
-      bus.p_op_b_mux  <= OP_RS;
-      bus.p_op_c_mux  <= OP_RS;
-      bus.p_imm_a_mux <= IMM_I;
-      bus.p_imm_b_mux <= IMM_I;
-      bus.p_imm_c_mux <= IMM_I;
     endtask
 
     task cycle_start;
@@ -1143,12 +1125,6 @@ package acc_test;
       bus.p_accept    <= #TA rsp.accept;
       bus.p_writeback <= #TA rsp.writeback;
       bus.p_use_rs    <= #TA rsp.use_rs;
-      bus.p_op_a_mux  <= #TA rsp.op_a_mux;
-      bus.p_op_b_mux  <= #TA rsp.op_b_mux;
-      bus.p_op_c_mux  <= #TA rsp.op_c_mux;
-      bus.p_imm_a_mux <= #TA rsp.imm_a_mux;
-      bus.p_imm_b_mux <= #TA rsp.imm_b_mux;
-      bus.p_imm_c_mux <= #TA rsp.imm_c_mux;
       //cycle_end();
     endtask
 
@@ -1163,18 +1139,12 @@ package acc_test;
       while (bus.q_instr_data == last_instr_data) begin
         cycle_end(); cycle_start();
       end
-      req=new;
-      rsp=new;
+      req = new;
+      rsp = new;
       req.instr_data = bus.q_instr_data;
-      rsp.accept    = bus.p_accept;
-      rsp.writeback = bus.p_writeback;
-      rsp.use_rs    = bus.p_use_rs;
-      rsp.op_a_mux  = bus.p_op_a_mux;
-      rsp.op_b_mux  = bus.p_op_b_mux;
-      rsp.op_c_mux  = bus.p_op_c_mux;
-      rsp.imm_a_mux = bus.p_imm_a_mux;
-      rsp.imm_b_mux = bus.p_imm_b_mux;
-      rsp.imm_c_mux = bus.p_imm_c_mux;
+      rsp.accept     = bus.p_accept;
+      rsp.writeback  = bus.p_writeback;
+      rsp.use_rs     = bus.p_use_rs;
       cycle_end();
     endtask
 
@@ -1323,57 +1293,16 @@ package acc_test;
     parameter type prd_rsp_t = logic
   );
 
+    // Check construction of interconnect request from predecoder response
+    // + adapter request.
     static function do_check (adp_req_t adp_req, prd_rsp_t prd_rsp, acc_req_t acc_req);
-      // Immediate extraction
-      logic [31:0] imm_i_type = { {20{adp_req.instr_data[31]}}, adp_req.instr_data[31:20] };
-      logic [31:0] imm_s_type =
-          { {20{adp_req.instr_data[31]}}, adp_req.instr_data[31:25], adp_req.instr_data[11:7] };
-      logic [31:0] imm_b_type =
-          { {19{adp_req.instr_data[31]}}, adp_req.instr_data[31], adp_req.instr_data[7],
-                adp_req.instr_data[30:25], adp_req.instr_data[11:8], 1'b0 };
-      logic [31:0] imm_u_type = { adp_req.instr_data[31:12], 12'b0 };
-      logic [31:0] imm_j_type =
-          { {12{adp_req.instr_data[31]}}, adp_req.instr_data[19:12], adp_req.instr_data[20],
-                adp_req.instr_data[30:21], 1'b0 };
-
-      // Immediate selection
-      logic[31:0] acc_imm_a;
-      logic[31:0] acc_imm_b;
-      logic[31:0] acc_imm_c;
-
-      bit result;
-
-      unique case (prd_rsp.imm_a_mux)
-        IMM_I:   acc_imm_a = imm_i_type;
-        IMM_S:   acc_imm_a = imm_s_type;
-        IMM_B:   acc_imm_a = imm_b_type;
-        IMM_U:   acc_imm_a = imm_u_type;
-        IMM_J:   acc_imm_a = imm_j_type;
-        default: acc_imm_a = imm_i_type;
-      endcase
-      unique case (prd_rsp.imm_b_mux)
-        IMM_I:   acc_imm_b = imm_i_type;
-        IMM_S:   acc_imm_b = imm_s_type;
-        IMM_B:   acc_imm_b = imm_b_type;
-        IMM_U:   acc_imm_b = imm_u_type;
-        IMM_J:   acc_imm_b = imm_j_type;
-        default: acc_imm_b = imm_i_type;
-      endcase
-      unique case (prd_rsp.imm_c_mux)
-        IMM_I:   acc_imm_c = imm_i_type;
-        IMM_S:   acc_imm_c = imm_s_type;
-        IMM_B:   acc_imm_c = imm_b_type;
-        IMM_U:   acc_imm_c = imm_u_type;
-        IMM_J:   acc_imm_c = imm_j_type;
-        default: acc_imm_c = imm_i_type;
-      endcase
 
       // Check result (Address is checked externally.
-      return acc_req.data_arga == (prd_rsp.op_a_mux == OP_RS ? adp_req.rs1 : acc_imm_a) &&
-             acc_req.data_argb == (prd_rsp.op_b_mux == OP_RS ? adp_req.rs2 : acc_imm_b) &&
-             acc_req.data_argc == (prd_rsp.op_c_mux == OP_RS ? adp_req.rs3 : acc_imm_c) &&
-             acc_req.id      == 1'b0 &&
-             acc_req.data_op == adp_req.instr_data;
+      return (acc_req.data_arga == (prd_rsp.use_rs[0] ? adp_req.rs1 : '0)) &&
+             (acc_req.data_argb == (prd_rsp.use_rs[1] ? adp_req.rs2 : '0)) &&
+             (acc_req.data_argc == (prd_rsp.use_rs[2] ? adp_req.rs3 : '0)) &&
+             (acc_req.id        == 1'b0)                                   &&
+             (acc_req.data_op   == adp_req.instr_data);
 
     endfunction
   endclass

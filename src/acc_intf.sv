@@ -261,25 +261,15 @@ interface ACC_PREDECODER_BUS;
   logic [1:0]        p_writeback;
   logic [2:0]        p_use_rs;
   logic              p_accept;
-  acc_pkg::op_sel_e  p_op_a_mux;
-  acc_pkg::op_sel_e  p_op_b_mux;
-  acc_pkg::op_sel_e  p_op_c_mux;
-  acc_pkg::imm_sel_e p_imm_a_mux;
-  acc_pkg::imm_sel_e p_imm_b_mux;
-  acc_pkg::imm_sel_e p_imm_c_mux;
-
-
 
   modport in (
     input  q_instr_data,
-    output p_writeback, p_use_rs, p_op_a_mux, p_op_b_mux, p_op_c_mux, p_imm_a_mux, p_imm_b_mux,
-      p_imm_c_mux, p_accept
+    output p_writeback, p_use_rs, p_accept
   );
 
   modport out (
     output q_instr_data,
-    input  p_writeback, p_use_rs, p_op_a_mux, p_op_b_mux, p_op_c_mux, p_imm_a_mux, p_imm_b_mux,
-      p_imm_c_mux, p_accept
+    input p_writeback, p_use_rs, p_accept
   );
 
 endinterface
@@ -292,29 +282,20 @@ interface ACC_PREDECODER_BUS_DV (
   logic [1:0]        p_writeback;
   logic [2:0]        p_use_rs;
   logic              p_accept;
-  acc_pkg::op_sel_e  p_op_a_mux;
-  acc_pkg::op_sel_e  p_op_b_mux;
-  acc_pkg::op_sel_e  p_op_c_mux;
-  acc_pkg::imm_sel_e p_imm_a_mux;
-  acc_pkg::imm_sel_e p_imm_b_mux;
-  acc_pkg::imm_sel_e p_imm_c_mux;
 
   modport in (
     input  q_instr_data,
-    output p_writeback, p_use_rs, p_op_a_mux, p_op_b_mux, p_op_c_mux, p_imm_a_mux, p_imm_b_mux,
-      p_imm_c_mux, p_accept
+    output p_writeback, p_use_rs, p_accept
   );
 
   modport out (
     output q_instr_data,
-    input  p_writeback, p_use_rs, p_op_a_mux, p_op_b_mux, p_op_c_mux, p_imm_a_mux, p_imm_b_mux,
-      p_imm_c_mux, p_accept
+    input p_writeback, p_use_rs, p_accept
   );
 
   modport monitor (
     input  q_instr_data,
-    input  p_writeback, p_use_rs, p_op_a_mux, p_op_b_mux, p_op_c_mux, p_imm_a_mux, p_imm_b_mux,
-      p_imm_c_mux, p_accept
+    input p_writeback, p_use_rs, p_accept
   );
 
   // No asserts. This interface is completely combinational
