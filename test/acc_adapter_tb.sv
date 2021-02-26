@@ -16,6 +16,8 @@ module acc_adapter_tb #(
   parameter int unsigned NrRandomTransactions = 1000
 );
 
+  //TODO: Response Path.
+
   import acc_pkg::*;
   localparam MaxNumRsp     = maxn(NumRsp, NumHier);
   localparam HierAddrWidth = cf_math_pkg::idx_width(NumHier);
@@ -273,7 +275,8 @@ module acc_adapter_tb #(
           if (acc_predecoder_monitor[i].req_mbx.try_peek(prd_req)) begin
             // Instruction data is `randc`
             // no repetitions in 2**32 samples
-            assert (prd_req.instr_data != adp_req.instr_data);
+            assert (prd_req.instr_data != adp_req.instr_data) else
+              $error("Mistakenly rejected adapter request");
           end
         end
         nr_requests++;
@@ -281,10 +284,23 @@ module acc_adapter_tb #(
       end
       forever begin
         // wait for end of sim.
-        if (nr_requests == NrRandomTransactions) $finish;
+        if (nr_requests == NrRandomTransactions) begin
+          repeat(1000) @(posedge clk);
+          $finish;
+        end
         @(posedge clk);
       end
     join_none
+  end
+
+  final begin
+    for (int i=0; i<NumRspTot; i++) begin
+      assert(acc_predecoder_monitor[i].req_mbx.num() == 0);
+    end
+    assert(acc_adapter_mst_monitor.req_mbx.num() == 0);
+    assert(acc_adapter_mst_monitor.req_mbx_rejected.num() == 0);
+    assert(acc_slv_monitor.req_mbx[0].num() == 0);
+    $display("Checked for non-empty mailboxes (request path)");
   end
 
   // DUT instantiation
