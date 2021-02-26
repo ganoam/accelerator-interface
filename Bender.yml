@@ -24,6 +24,7 @@ sources:
       - src/acc_test.sv
   - target: test
     files:
+      - test/acc_rvb_insn_pkg.sv
       - test/acc_interconnect_tb.sv
       - test/acc_cluster_interconnect_tb.sv
       - test/acc_adapter_tb.sv
