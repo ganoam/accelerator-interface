@@ -24,6 +24,7 @@ package acc_test;
     rand logic [31:0]             data_op;
     rand logic [IdWidth-1:0]      id;
 
+    // TODO: remove?
     typedef req_t # (
       .AddrWidth    ( AddrWidth    ),
       .DataWidth    ( DataWidth    ),
@@ -44,7 +45,11 @@ package acc_test;
   endclass
 
   // Compare reqs of different parameterizations.
-  // Within an interconnect, requests may only differ only by IdWidh
+  // different parametrizations
+  // TODO: move into req_t class and change all invocations. (?)
+  // TODO: May not be possible. IdWidth parameter is still different, although
+  // MARK: MARK0
+  // not compared.
   class compare_req #(
     parameter type mst_req_t = logic,
     parameter type slv_req_t = logic
@@ -54,8 +59,7 @@ package acc_test;
              mst_req.data_arga       == slv_req.data_arga &&
              mst_req.data_argb       == slv_req.data_argb &&
              mst_req.data_argc       == slv_req.data_argc &&
-             mst_req.data_op         == slv_req.data_op   &&
-             mst_req.id[4:0]       == slv_req.id[4:0];
+             mst_req.data_op         == slv_req.data_op;
     endfunction
   endclass
 
@@ -68,6 +72,7 @@ package acc_test;
     rand logic [DataWidth-1:0] data1;
     rand logic                 dual_writeback;
     rand logic                 error;
+    logic [4:0]                rd; // not random!
     logic [IdWidth-1:0]        id;
 
     typedef rsp_t # (
@@ -81,6 +86,7 @@ package acc_test;
               "rsp.data1: %x\n",          data1,
               "rsp.dual_writeback: %x\n", dual_writeback,
               "rsp.error %x\n",           error,
+              "rsp.rd: %x\n",             rd,
               "rsp.id: %x\n",             id,
               "\n"
             );
@@ -90,6 +96,7 @@ package acc_test;
 
   // Compare rsps of different parameterizations.
   // Within an interconnect, requests may only differ only by IdWidh
+  // TODO: See MARK0
   class compare_rsp #(
     parameter type mst_rsp_t = logic,
     parameter type slv_rsp_t = logic
@@ -99,7 +106,7 @@ package acc_test;
              mst_rsp.data1          == slv_rsp.data1          &
              mst_rsp.dual_writeback == slv_rsp.dual_writeback &
              mst_rsp.error          == slv_rsp.error          &
-             mst_rsp.id[4:0]        == slv_rsp.id[4:0];
+             mst_rsp.rd             == slv_rsp.rd;
     endfunction
   endclass
 
@@ -153,6 +160,7 @@ package acc_test;
       bus.p_data0  <= '0;
       bus.p_data1  <= '0;
       bus.p_id     <= '0;
+      bus.p_rd     <= '0;
       bus.p_error  <= '0;
       bus.p_valid  <= '0;
       bus.q_ready  <= '0;
@@ -193,6 +201,7 @@ package acc_test;
       bus.p_data1          <= #TA rsp.data1;
       bus.p_dual_writeback <= #TA rsp.dual_writeback;
       bus.p_id             <= #TA rsp.id;
+      bus.p_rd             <= #TA rsp.rd;
       bus.p_error          <= #TA rsp.error;
       bus.p_valid          <= #TA 1;
       cycle_start();
@@ -202,6 +211,7 @@ package acc_test;
       bus.p_data1          <= #TA '0;
       bus.p_dual_writeback <= #TA '0;
       bus.p_id             <= #TA '0;
+      bus.p_rd             <= #TA '0;
       bus.p_error          <= #TA '0;
       bus.p_valid          <= #TA 0;
     endtask
@@ -233,6 +243,7 @@ package acc_test;
       rsp.dual_writeback   = bus.p_dual_writeback;
       rsp.error            = bus.p_error;
       rsp.id               = bus.p_id;
+      rsp.rd               = bus.p_rd;
       cycle_end();
       bus.p_ready <= #TA 0;
     endtask
@@ -261,6 +272,7 @@ package acc_test;
       rsp.dual_writeback = bus.p_dual_writeback;
       rsp.error          = bus.p_error;
       rsp.id             = bus.p_id;
+      rsp.rd             = bus.p_rd;
       cycle_end();
     endtask
 
@@ -459,7 +471,7 @@ package acc_test;
         automatic int_req_t req;
         rand_wait(REQ_MIN_WAIT_CYCLES, REQ_MAX_WAIT_CYCLES);
         this.drv.recv_req(req);
-        req_mbx[req.id].put(req);
+        req_mbx[req.id >> 1].put(req);
       end
     endtask
 
@@ -487,6 +499,7 @@ package acc_test;
           // generate and send random response.
           assert(rsp.randomize());
           rsp.id = req.id;
+          rsp.rd = req.data_op[11:7];
 
           // send response back to requester.
           @(posedge this.drv.bus.clk_i);
@@ -516,8 +529,8 @@ package acc_test;
         .TT           ( TT           )
   );
 
-    mailbox req_mbx[NumReq];
-    mailbox rsp_mbx[NumReq];
+    mailbox req_mbx[IdWidth**2];
+    mailbox rsp_mbx[IdWidth**2];
 
     // Constructor.
     function new (
@@ -538,17 +551,16 @@ package acc_test;
       fork
         forever begin
           automatic int_req_t req;
-          automatic int mbx_id = NumReq > 1 ? req.id[IdWidth-1:0] : 0;
           this.drv.mon_req(req);
           // put in req mbox corresponding to the requester
-          req_mbx[mbx_id].put(req);
+          //req.display();
+          req_mbx[req.id].put(req);
         end
         forever begin
           automatic int_rsp_t rsp;
-          automatic int mbx_id = NumReq > 1 ? rsp.id[IdWidth-1:0] : 0;
           this.drv.mon_rsp(rsp);
           // put in req mbox corresponding to the requester
-          rsp_mbx[mbx_id].put(rsp);
+          rsp_mbx[rsp.id].put(rsp);
         end
       join
     endtask
@@ -658,7 +670,7 @@ package acc_test;
     rand logic [DataWidth-1:0] data0;
     rand logic [DataWidth-1:0] data1;
     rand logic                 error;
-    rand logic [4:0]           id;
+    rand logic [4:0]           rd;
     rand logic                 dual_writeback;
   endclass
 
@@ -700,15 +712,15 @@ package acc_test;
     endtask
 
     task reset_slave;
-      bus.q_ready     <= '0;
-      bus.k_accept    <= '0;
-      bus.k_writeback <= '0;
-      bus.p_data0      <= '0;
-      bus.p_data1      <= '0;
+      bus.q_ready          <= '0;
+      bus.k_accept         <= '0;
+      bus.k_writeback      <= '0;
+      bus.p_data0          <= '0;
+      bus.p_data1          <= '0;
       bus.p_dual_writeback <= '0;
-      bus.p_id        <= '0;
-      bus.p_error     <= '0;
-      bus.p_valid     <= '0;
+      bus.p_rd             <= '0;
+      bus.p_error          <= '0;
+      bus.p_valid          <= '0;
     endtask
 
     task cycle_start;
@@ -771,7 +783,7 @@ package acc_test;
       bus.p_data0          <= #TA rsp.data0;
       bus.p_data1          <= #TA rsp.data1;
       bus.p_dual_writeback <= #TA rsp.dual_writeback;
-      bus.p_id             <= #TA rsp.id;
+      bus.p_rd             <= #TA rsp.rd;
       bus.p_error          <= #TA rsp.error;
       bus.p_valid          <= #TA 1;
       cycle_start();
@@ -780,7 +792,7 @@ package acc_test;
       bus.p_data0          <= #TA '0;
       bus.p_data1          <= #TA '0;
       bus.p_dual_writeback <= #TA '0;
-      bus.p_id             <= #TA '0;
+      bus.p_rd             <= #TA '0;
       bus.p_error          <= #TA '0;
       bus.p_valid          <= #TA 0;
     endtask
@@ -820,7 +832,7 @@ package acc_test;
       rsp.data1            = bus.p_data1;
       rsp.dual_writeback   = bus.p_dual_writeback;
       rsp.error            = bus.p_error;
-      rsp.id               = bus.p_id;
+      rsp.rd               = bus.p_rd;
       cycle_end();
       bus.p_ready <= #TA 0;
     endtask
@@ -849,7 +861,7 @@ package acc_test;
       rsp.data1          = bus.p_data1;
       rsp.dual_writeback = bus.p_dual_writeback;
       rsp.error          = bus.p_error;
-      rsp.id             = bus.p_id;
+      rsp.rd             = bus.p_rd;
       cycle_end();
     endtask
 
@@ -977,8 +989,7 @@ package acc_test;
     .TT(TT)
   );
 
-    // responses each destination register are generated in order.
-    mailbox req_mbx [32];
+    mailbox req_mbx = new();
 
     task recv_requests ();
       forever begin
@@ -986,7 +997,8 @@ package acc_test;
         rand_wait(REQ_MIN_WAIT_CYCLES, REQ_MAX_WAIT_CYCLES);
         this.drv.recv_req(req);
         if (req.k_writeback) begin
-          req_mbx[req.instr[11:7]].put(req);
+          // put in mailbox if writeback expected
+          req_mbx.put(req);
         end
       end
     endtask
@@ -995,34 +1007,9 @@ package acc_test;
       forever begin
         automatic int_adapter_rsp_t rsp = new;
         automatic int_adapter_req_t req;
-        // generate random sequence of requesters.
-        automatic int req_id[32];
-        automatic bit req_found = 1'b0;
-        // randomly pick a request
-        for (int i =0; i<32; i++) begin
-          req_id[i] = i;
-        end
-        req_id.shuffle();
-        for (int i=0; i<32; i++) begin
-          automatic int r_id = req_id[i];
-          if (req_mbx[r_id].num() != 0) begin
-            req_mbx[r_id].get(req);
-            req_found = 1'b1;
-            break;
-          end
-        end
-        if (req_found==1'b1) begin
-          // generate and send random response.
-          assert(rsp.randomize());
-          rsp.id = req.id;
-
-          // send response back to requester.
-          @(posedge this.drv.bus.clk_i);
-          rand_wait(RSP_MIN_WAIT_CYCLES, RSP_MAX_WAIT_CYCLES);
-          this.drv.send_rsp(rsp);
-        end else begin
-          this.drv.cycle_end();
-        end
+        req_mbx.get(req);
+        rand_wait(RSP_MIN_WAIT_CYCLES, RSP_MAX_WAIT_CYCLES);
+        this.drv.send_rsp(rsp);
       end
     endtask
 
@@ -1038,9 +1025,9 @@ package acc_test;
     .TT(TT)
   );
 
-    mailbox req_mbx = new();
-    mailbox rsp_mbx = new();
-    mailbox req_mbx_rejected= new();
+    mailbox req_mbx          = new();
+    mailbox rsp_mbx          = new();
+    mailbox req_mbx_rejected = new();
 
     // Constructor
     function new(
@@ -1385,7 +1372,7 @@ package acc_test;
       return acc_req.data_arga == (prd_rsp.op_a_mux == OP_RS ? adp_req.rs1 : acc_imm_a) &&
              acc_req.data_argb == (prd_rsp.op_b_mux == OP_RS ? adp_req.rs2 : acc_imm_b) &&
              acc_req.data_argc == (prd_rsp.op_c_mux == OP_RS ? adp_req.rs3 : acc_imm_c) &&
-             acc_req.id      == adp_req.instr_data[11:7] &&
+             acc_req.id      == 1'b0 &&
              acc_req.data_op == adp_req.instr_data;
 
     endfunction

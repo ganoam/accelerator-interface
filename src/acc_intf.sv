@@ -41,22 +41,23 @@ interface ACC_BUS #(
   logic        q_ready;
 
   // Response Channel (P).
-  data_t p_data0;
-  data_t p_data1;
-  logic  p_dual_writeback;
-  id_t   p_id;
-  logic  p_error;
-  logic  p_valid;
-  logic  p_ready;
+  data_t      p_data0;
+  data_t      p_data1;
+  logic       p_dual_writeback;
+  id_t        p_id;
+  logic [4:0] p_rd;
+  logic       p_error;
+  logic       p_valid;
+  logic       p_ready;
 
   modport in (
     input  q_addr, q_data_op, q_data_arga, q_data_argb, q_data_argc, q_id, q_valid, p_ready,
-    output q_ready, p_data0, p_data1, p_dual_writeback, p_id, p_error, p_valid
+    output q_ready, p_data0, p_data1, p_dual_writeback, p_id, p_rd, p_error, p_valid
   );
 
   modport out (
     output q_addr, q_data_op, q_data_arga, q_data_argb, q_data_argc, q_id, q_valid, p_ready,
-    input  q_ready, p_data0, p_data1, p_dual_writeback, p_id, p_error, p_valid
+    input  q_ready, p_data0, p_data1, p_dual_writeback, p_id, p_rd, p_error, p_valid
   );
 
 endinterface
@@ -87,27 +88,28 @@ interface ACC_BUS_DV #(
   logic        q_ready;
 
   // Response Channel (P).
-  data_t p_data0;
-  data_t p_data1;
-  logic  p_dual_writeback;
-  id_t   p_id;
-  logic  p_error;
-  logic  p_valid;
-  logic  p_ready;
+  data_t      p_data0;
+  data_t      p_data1;
+  logic       p_dual_writeback;
+  id_t        p_id;
+  logic [4:0] p_rd;
+  logic       p_error;
+  logic       p_valid;
+  logic       p_ready;
 
   modport in (
     input  q_addr, q_data_op, q_data_arga, q_data_argb, q_data_argc, q_id, q_valid, p_ready,
-    output q_ready, p_data0, p_data1, p_dual_writeback, p_id, p_error, p_valid
+    output q_ready, p_data0, p_data1, p_dual_writeback, p_id, p_rd, p_error, p_valid
   );
 
   modport out (
     output q_addr, q_data_op, q_data_arga, q_data_argb, q_data_argc, q_id, q_valid, p_ready,
-    input  q_ready, p_data0, p_data1, p_dual_writeback, p_id, p_error, p_valid
+    input  q_ready, p_data0, p_data1, p_dual_writeback, p_id, p_rd, p_error, p_valid
   );
 
   modport monitor (
     input  q_addr, q_data_op, q_data_arga, q_data_argb, q_data_argc, q_id, q_valid, p_ready,
-    input  q_ready, p_data0, p_data1, p_dual_writeback, p_id, p_error, p_valid
+    input  q_ready, p_data0, p_data1, p_dual_writeback, p_id, p_rd, p_error, p_valid
   );
 
   // pragma translate_off
@@ -124,6 +126,7 @@ interface ACC_BUS_DV #(
   assert property (@(posedge clk_i) (p_valid && !p_ready |=> $stable(p_data1)));
   assert property (@(posedge clk_i) (p_valid && !p_ready |=> $stable(p_dual_writeback)));
   assert property (@(posedge clk_i) (p_valid && !p_ready |=> $stable(p_id)));
+  assert property (@(posedge clk_i) (p_valid && !p_ready |=> $stable(p_rd)));
   assert property (@(posedge clk_i) (p_valid && !p_ready |=> $stable(p_error)));
   assert property (@(posedge clk_i) (p_valid && !p_ready |=> p_valid));
   `endif
@@ -137,7 +140,6 @@ interface ACC_ADAPTER_BUS #(
 );
 
   typedef logic [DataWidth-1:0] data_t;
-  typedef logic [4:0]           id_t;
 
   // Request Channel (Q)
   logic [31:0] q_instr_data;
@@ -153,24 +155,24 @@ interface ACC_ADAPTER_BUS #(
   logic       q_ready;
 
   // Response Channel (P)
-  data_t p_data0;
-  data_t p_data1;
-  logic  p_dual_writeback;
-  id_t   p_id;
-  logic  p_error;
-  logic  p_valid;
-  logic  p_ready;
+  data_t      p_data0;
+  data_t      p_data1;
+  logic       p_dual_writeback;
+  logic [4:0] p_rd;
+  logic       p_error;
+  logic       p_valid;
+  logic       p_ready;
 
   modport in (
     input q_instr_data, q_rs1, q_rs2, q_rs3, q_rs_valid, q_valid, p_ready,
     output k_accept, k_writeback, q_ready,
-    output p_data0, p_data1, p_dual_writeback, p_id, p_error, p_valid
+    output p_data0, p_data1, p_dual_writeback, p_rd, p_error, p_valid
   );
 
   modport out (
     output q_instr_data, q_rs1, q_rs2, q_rs3, q_rs_valid, q_valid, p_ready,
     input k_accept, k_writeback, q_ready,
-    input p_data0, p_data1, p_dual_writeback, p_id, p_error, p_valid
+    input p_data0, p_data1, p_dual_writeback, p_rd, p_error, p_valid
   );
 
 
@@ -185,7 +187,6 @@ interface ACC_ADAPTER_BUS_DV #(
 );
 
   typedef logic [DataWidth-1:0] data_t;
-  typedef logic [4:0]           id_t;
 
   // Request Channel (Q)
   logic [31:0] q_instr_data;
@@ -201,30 +202,30 @@ interface ACC_ADAPTER_BUS_DV #(
   logic       q_ready;
 
   // Response Channel (P)
-  data_t p_data0;
-  data_t p_data1;
-  logic  p_dual_writeback;
-  id_t   p_id;
-  logic  p_error;
-  logic  p_valid;
-  logic  p_ready;
+  data_t      p_data0;
+  data_t      p_data1;
+  logic       p_dual_writeback;
+  logic [4:0] p_rd;
+  logic       p_error;
+  logic       p_valid;
+  logic       p_ready;
 
   modport in (
     input q_instr_data, q_rs1, q_rs2, q_rs3, q_rs_valid, q_valid, p_ready,
     output k_accept, k_writeback, q_ready,
-    output p_data0, p_data1, p_dual_writeback, p_id, p_error, p_valid
+    output p_data0, p_data1, p_dual_writeback, p_rd, p_error, p_valid
   );
 
   modport out (
     output q_instr_data, q_rs1, q_rs2, q_rs3, q_rs_valid, q_valid, p_ready,
     input k_accept, k_writeback, q_ready,
-    input p_data0, p_data1, p_dual_writeback, p_id, p_error, p_valid
+    input p_data0, p_data1, p_dual_writeback, p_rd, p_error, p_valid
   );
 
   modport monitor (
     output q_instr_data, q_rs1, q_rs2, q_rs3, q_rs_valid, q_valid, p_ready,
     input k_accept, k_writeback, q_ready,
-    input p_data0, p_data1, p_dual_writeback, p_id, p_error, p_valid
+    input p_data0, p_data1, p_dual_writeback, p_rd, p_error, p_valid
   );
 
   // pragma translate_off
@@ -245,7 +246,7 @@ interface ACC_ADAPTER_BUS_DV #(
   assert property (@(posedge clk_i) (p_valid && !p_ready |=> $stable(p_data0)));
   assert property (@(posedge clk_i) (p_valid && !p_ready |=> $stable(p_data1)));
   assert property (@(posedge clk_i) (p_valid && !p_ready |=> $stable(p_dual_writeback)));
-  assert property (@(posedge clk_i) (p_valid && !p_ready |=> $stable(p_id)));
+  assert property (@(posedge clk_i) (p_valid && !p_ready |=> $stable(p_rd)));
   assert property (@(posedge clk_i) (p_valid && !p_ready |=> $stable(p_error)));
   assert property (@(posedge clk_i) (p_valid && !p_ready |=> p_valid));
 

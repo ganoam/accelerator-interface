@@ -11,11 +11,9 @@ module acc_adapter_tb #(
   parameter int unsigned DataWidth       = 32,
   parameter int          NumHier         = 3,
   parameter int          NumRsp[NumHier] = '{4,2,2},
-  parameter int          NumRspTot     = sumn(NumRsp, NumHier),
+  parameter int          NumRspTot       = sumn(NumRsp, NumHier),
   // TB Params
-  parameter int unsigned NrRandomTransactions = 10,
-  // Instr per predecoder
-  parameter int unsigned NrInstr = 10
+  parameter int unsigned NrRandomTransactions = 1000
 );
 
   import acc_pkg::*;
@@ -57,7 +55,7 @@ module acc_adapter_tb #(
   typedef acc_test::req_t # (
     .AddrWidth ( AddrWidth ),
     .DataWidth ( DataWidth ),
-    .IdWidth   ( 5         )
+    .IdWidth   ( 1         )
   ) tb_req_t;
 
   typedef acc_test::adapter_req_t #(
@@ -86,13 +84,13 @@ module acc_adapter_tb #(
   ACC_BUS #(
     .AddrWidth ( AddrWidth ),
     .DataWidth ( DataWidth ),
-    .IdWidth   ( 5         )
+    .IdWidth   ( 1         )
   ) slave ();
 
   ACC_BUS_DV #(
     .AddrWidth ( AddrWidth ),
     .DataWidth ( DataWidth ),
-    .IdWidth   ( 5         )
+    .IdWidth   ( 1         )
   ) slave_dv ( clk );
 
   // From / to predecoders
@@ -115,7 +113,7 @@ module acc_adapter_tb #(
     // Acc bus interface paramaters;
     .DataWidth ( DataWidth ),
     .AddrWidth ( AddrWidth ),
-    .IdWidth   ( 5         ),
+    .IdWidth   ( 1         ),
     .NumReq    ( 1         ),
     // Stimuli application and test time
     .TA ( ApplTime ),
@@ -123,14 +121,14 @@ module acc_adapter_tb #(
   ) acc_slv_monitor_t;
 
   typedef acc_test::acc_adapter_monitor #(
-    .DataWidth(DataWidth),
-    .TA(ApplTime),
-    .TT(TestTime)
+    .DataWidth ( DataWidth ),
+    .TA        ( ApplTime  ),
+    .TT        ( TestTime  )
   ) acc_adapter_monitor_t;
 
   typedef acc_test::acc_predecoder_monitor #(
-    .TA(ApplTime),
-    .TT(TestTime)
+    .TA ( ApplTime ),
+    .TT ( TestTime )
   ) acc_predecoder_monitor_t;
 
 
@@ -160,23 +158,23 @@ module acc_adapter_tb #(
   // -------
 
   typedef acc_test::rand_acc_adapter_master#(
-    .DataWidth(DataWidth),
-    .TA(ApplTime),
-    .TT(TestTime)
+    .DataWidth ( DataWidth ),
+    .TA        ( ApplTime  ),
+    .TT        ( TestTime  )
   ) rand_acc_adapter_master_t;
 
   typedef acc_test::rand_acc_slave#(
-    .AddrWidth(AddrWidth),
-    .DataWidth(DataWidth),
-    .IdWidth(5),
-    .TA(ApplTime),
-    .TT(TestTime)
+    .AddrWidth ( AddrWidth ),
+    .DataWidth ( DataWidth ),
+    .IdWidth   ( 1         ),
+    .TA        ( ApplTime  ),
+    .TT        ( TestTime  )
   ) rand_acc_slave_t;
 
   typedef acc_test::rand_acc_predecoder_slave_collective #(
-    .NumRspTot(NumRspTot),
-    .TA(ApplTime),
-    .TT(TestTime)
+    .NumRspTot ( NumRspTot ),
+    .TA        ( ApplTime  ),
+    .TT        ( TestTime  )
   ) rand_acc_predecoder_slv_coll_t;
 
   rand_acc_adapter_master_t rand_acc_adapter_master = new(master_dv);
@@ -205,9 +203,9 @@ module acc_adapter_tb #(
   // Request generation checker
   let check_req(adp_req, prd_rsp, acc_req) =
     acc_test::adp_check_req #(
-      .acc_req_t(tb_req_t),
-      .adp_req_t(tb_adp_req_t),
-      .prd_rsp_t(tb_prd_rsp_t)
+      .acc_req_t ( tb_req_t     ),
+      .adp_req_t ( tb_adp_req_t ),
+      .prd_rsp_t ( tb_prd_rsp_t )
     )::do_check(adp_req, prd_rsp, acc_req);
 
   // Scoreboard
@@ -295,11 +293,11 @@ module acc_adapter_tb #(
     .NumHier   ( NumHier   ),
     .NumRsp    ( NumRsp    )
   ) dut (
-    .clk_i(clk),
-    .rst_ni(rst_n),
-    .mst(master),
-    .slv(slave),
-    .prd(predecoder)
+    .clk_i  ( clk        ),
+    .rst_ni ( rst_n      ),
+    .mst    ( master     ),
+    .slv    ( slave      ),
+    .prd    ( predecoder )
   );
 
 

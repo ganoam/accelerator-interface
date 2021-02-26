@@ -64,7 +64,7 @@ module acc_interconnect #(
 );
 
   localparam int unsigned IdxWidth   = cf_math_pkg::idx_width(NumReq);
-  localparam int unsigned ExtIdWidth = 5 + IdxWidth;
+  localparam int unsigned ExtIdWidth = 1 + IdxWidth;
   localparam int unsigned AddrWidth  = HierAddrWidth + AccAddrWidth;
 
   // Local xbar select signal width
@@ -79,7 +79,6 @@ module acc_interconnect #(
   logic      [NumReq-1:0]                     mst_req_p_ready;
   // Hierarchy level address
   logic      [NumReq-1:0] [HierAddrWidth-1:0] mst_req_q_level;
-
 
   // this is mst_req_t, bc the payload does not change through the crossbar.
   req_chan_t [NumRsp-1:0] slv_req_q_chan;
@@ -107,15 +106,15 @@ module acc_interconnect #(
 
   for (genvar i=0; i<NumRsp; i++) begin : gen_slv_req_assignment
     // Extend ID signal at slave side
-    `ACC_ASSIGN_Q_SIGNALS(assign, slv_req_o[i].q, slv_req_q_chan[i], "id", {sender_id[i], slv_req_q_chan[i].id})
+    `ACC_ASSIGN_Q_SIGNALS(assign, slv_req_o[i].q, slv_req_q_chan[i], "id", {sender_id[i], 1'b0})
     assign slv_req_o[i].q_valid     = slv_req_q_valid[i];
     assign slv_req_o[i].p_ready     = slv_req_p_ready[i];
   end
 
   for (genvar i=0; i<NumRsp; i++) begin : gen_mst_rsp_assignment
     // Discard upper bits of ID signal after xbar traversal.
-    `ACC_ASSIGN_P_SIGNALS(assign, slv_rsp_p_chan[i], slv_rsp_i[i].p, "id", slv_rsp_i[i].p.id[4:0])
-    assign receiver_id[i]     = slv_rsp_i[i].p.id[ExtIdWidth-1:5];
+    `ACC_ASSIGN_P_SIGNALS(assign, slv_rsp_p_chan[i], slv_rsp_i[i].p, "id", 1'b0)
+    assign receiver_id[i]     = slv_rsp_i[i].p.id[ExtIdWidth-1:1];
     assign slv_rsp_p_valid[i] = slv_rsp_i[i].p_valid;
     assign slv_rsp_q_ready[i] = slv_rsp_i[i].q_ready;
   end
@@ -254,14 +253,14 @@ module acc_interconnect_intf #(
   ACC_BUS slv       [NumRsp]
 );
 
-  localparam int unsigned IdxWidth    = cf_math_pkg::idx_width(NumReq);
-  localparam int unsigned ExtIdWidth  = 5 + IdxWidth;
-  localparam int unsigned AddrWidth = HierAddrWidth + AccAddrWidth;
+  localparam int unsigned IdxWidth   = cf_math_pkg::idx_width(NumReq);
+  localparam int unsigned ExtIdWidth = 1 + IdxWidth;
+  localparam int unsigned AddrWidth  = HierAddrWidth + AccAddrWidth;
 
-  typedef logic [DataWidth-1:0]    data_t;
-  typedef logic [AddrWidth-1:0]    addr_t;
-  typedef logic [4:0]              in_id_t;
-  typedef logic [ExtIdWidth-1:0]   ext_id_t;
+  typedef logic [DataWidth-1:0]  data_t;
+  typedef logic [AddrWidth-1:0]  addr_t;
+  typedef logic                  in_id_t;
+  typedef logic [ExtIdWidth-1:0] ext_id_t;
 
   // This generates some unused typedefs. still cleaner than invoking macros
   // separately.

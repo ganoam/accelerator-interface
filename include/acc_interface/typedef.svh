@@ -27,11 +27,12 @@
 
 `define ACC_TYPEDEF_RSP_CHAN_T(__rsp_chan_t, __data_t, __id_t ) \
   typedef struct packed {                                       \
-    __data_t data0;                                             \
-    __data_t data1;                                             \
-    logic    error;                                             \
-    logic    dual_writeback;                                    \
-    __id_t   id;                                                \
+    __data_t    data0;                                          \
+    __data_t    data1;                                          \
+    logic       error;                                          \
+    logic       dual_writeback;                                 \
+    __id_t      id;                                             \
+    logic [4:0] rd;                                             \
   } __rsp_chan_t;
 
 `define ACC_TYPEDEF_RSP_T(__rsp_t, __rsp_chan_t) \
@@ -84,7 +85,13 @@
   } __ack_chan_t;
 
 `define ACC_ADAPTER_TYPEDEF_RSP_CHAN_T(__rsp_chan_t, __data_t, __id_t) \
-  `ACC_TYPEDEF_RSP_CHAN_T(__rsp_chan_t, __data_t, __id_t)
+  typedef struct packed {                                       \
+    __data_t    data0;                                          \
+    __data_t    data1;                                          \
+    logic       error;                                          \
+    logic       dual_writeback;                                 \
+    logic [4:0] rd;                                             \
+  } __rsp_chan_t;
 
 `define ACC_ADAPTER_TYPEDEF_ALL(__name, __data_t, __id_t)         \
   `ACC_ADAPTER_TYPEDEF_REQ_CHAN_T(__name``_req_chan_t, __data_t)  \

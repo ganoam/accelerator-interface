@@ -43,7 +43,8 @@
   __opt_as dst.p``__sep_dst``data1          = src.p``__sep_src``data1;          \
   __opt_as dst.p``__sep_dst``error          = src.p``__sep_src``error;          \
   __opt_as dst.p``__sep_dst``dual_writeback = src.p``__sep_src``dual_writeback; \
-  __opt_as dst.p``__sep_dst``id             = src.p``__sep_src``id;
+  __opt_as dst.p``__sep_dst``id             = src.p``__sep_src``id;             \
+  __opt_as dst.p``__sep_dst``rd             = src.p``__sep_src``rd;
 
 `define ACC_ASSIGN(slv, mst)                 \
   `ACC_ASSIGN_Q_CHAN(assign, slv, mst, _, _) \
@@ -70,7 +71,8 @@
   __opt_as dst.data1          = ``ovr_name`` == "data1" ? ovr_sig : src.data1;                   \
   __opt_as dst.dual_writeback = ``ovr_name`` == "dual_writeback" ? ovr_sig : src.dual_writeback; \
   __opt_as dst.error          = ``ovr_name`` == "error" ? ovr_sig : src.error;                   \
-  __opt_as dst.id             = ``ovr_name`` == "id" ? ovr_sig : src.id;
+  __opt_as dst.id             = ``ovr_name`` == "id" ? ovr_sig : src.id;                         \
+  __opt_as dst.rd             = ``ovr_name`` == "rd" ? ovr_sig : src.rd;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -143,14 +145,26 @@
   __opt_as dst.k``__sep_dst``accept    = src.k``__sep_src``accept;          \
   __opt_as dst.k``__sep_dst``writeback = src.k``__sep_src``writeback;
 
-`define ACC_ADAPTER_ASSIGN_P_CHAN(__opt_as, dst, src, __sep_dst, __sep_src) \
-  `ACC_ASSIGN_P_CHAN(__opt_as, dst, src, __sep_dst, __sep_src)
+`define ACC_ADAPTER_ASSIGN_P_CHAN(__opt_as, dst, src, __sep_dst, __sep_src)     \
+  __opt_as dst.p``__sep_dst``data0          = src.p``__sep_src``data0;          \
+  __opt_as dst.p``__sep_dst``data1          = src.p``__sep_src``data1;          \
+  __opt_as dst.p``__sep_dst``error          = src.p``__sep_src``error;          \
+  __opt_as dst.p``__sep_dst``dual_writeback = src.p``__sep_src``dual_writeback; \
+  __opt_as dst.p``__sep_dst``rd             = src.p``__sep_src``rd;
+
+  // Assign P_channel signals with override.
+`define ACC_ADAPTER_ASSIGN_P_SIGNALS(__opt_as, dst, src,  ovr_name="none", ovr_sig='0)                   \
+  __opt_as dst.data0          = ``ovr_name`` == "data0" ? ovr_sig : src.data0;                   \
+  __opt_as dst.data1          = ``ovr_name`` == "data1" ? ovr_sig : src.data1;                   \
+  __opt_as dst.dual_writeback = ``ovr_name`` == "dual_writeback" ? ovr_sig : src.dual_writeback; \
+  __opt_as dst.error          = ``ovr_name`` == "error" ? ovr_sig : src.error;                   \
+  __opt_as dst.rd             = ``ovr_name`` == "rd" ? ovr_sig : src.rd;
 
 `define ACC_ADAPTER_ASSIGN(slv, mst)                  \
   `ACC_ADAPTER_ASSIGN_Q_CHAN(assign, slv, mst, _, _) \
   `ACC_ASSIGN_HANDSHAKE(assign, slv, mst, q)         \
   `ACC_ADAPTER_ASSIGN_K_CHAN(assign, mst, slv, _, _) \
-  `ACC_ASSIGN_P_CHAN(assign, mst, slv, _, _)         \
+  `ACC_ADAPTER_ASSIGN_P_CHAN(assign, mst, slv, _, _)         \
   `ACC_ASSIGN_HANDSHAKE(assign, mst, slv, p)
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////

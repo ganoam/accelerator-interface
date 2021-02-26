@@ -17,9 +17,7 @@ module acc_adapter #(
   parameter type         acc_adapter_req_t = logic,
   parameter type         acc_adapter_rsp_t = logic,
   // Dependent parameter DO NOT OVERRIDE
-  parameter int NumRspTot                  = acc_pkg::sumn(NumRsp, NumHier),
-  // TB Param
-  parameter int NrRandomTransactions= 10
+  parameter int NumRspTot                  = acc_pkg::sumn(NumRsp, NumHier)
 ) (
   input clk_i,
   input rst_ni,
@@ -179,7 +177,7 @@ module acc_adapter #(
       .ONEHOT_WIDTH ( MaxNumRsp )
     ) acc_addr_enc_i (
       .onehot ( predecoder_accept_lvl[i] ),
-      .bin    ( acc_addr[i]           )
+      .bin    ( acc_addr[i]              )
     );
     // Hierarchy level selsect
     assign hier_onehot[i] = |predecoder_accept_lvl[i][NumRsp[i]-1:0];
@@ -227,7 +225,7 @@ module acc_adapter #(
 
   // Instruction Data
   assign acc_out_fifo_req.data_op = instr_rdata_id;
-  assign acc_out_fifo_req.id      = instr_rd;
+  assign acc_out_fifo_req.id      = 1'b0;
 
   //////////////////
   // Flow Control //
