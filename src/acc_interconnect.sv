@@ -176,7 +176,7 @@ module acc_interconnect #(
     .NumOut      ( NumReq      ),
     .DataWidth   ( DataWidth   ),
     .payload_t   ( rsp_chan_t  ),
-    .OutSpillReg ( RegisterReq )
+    .OutSpillReg ( RegisterRsp )
   ) response_xbar_i (
     .clk_i   ( clk_i           ),
     .rst_ni  ( rst_ni          ),
