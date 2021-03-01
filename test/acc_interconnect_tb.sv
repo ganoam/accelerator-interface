@@ -349,11 +349,11 @@ module acc_interconnect_tb  #(
     .RegisterReq   ( RegisterReq   ),
     .RegisterRsp   ( RegisterRsp   )
   ) dut (
-    .clk_i    ( clk         ),
-    .rst_ni   ( rst_n       ),
-    .mst_next ( master_next ),
-    .mst      ( master      ),
-    .slv      ( slave       )
+    .clk_i          ( clk         ),
+    .rst_ni         ( rst_n       ),
+    .acc_c_mst_next ( master_next ),
+    .acc_c_mst      ( slave       ),
+    .acc_c_slv      ( master      )
   );
 
   for (genvar i=0; i<NumReq; i++) begin : gen_bypass_tieoff

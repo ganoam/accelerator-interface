@@ -385,11 +385,11 @@ module acc_cluster_interconnect_tb  #(
         .RegisterReq   ( RegisterReq[j] ),
         .RegisterRsp   ( RegisterRsp[j] )
       ) dut (
-        .clk_i     ( clk                                ),
-        .rst_ni    ( rst_n                              ),
-         .mst_next ( master[out_mst_start:out_mst_stop] ),
-         .mst      ( master[in_mst_start:in_mst_stop]   ),
-        .slv       ( slave                              )
+        .clk_i           ( clk                                ),
+        .rst_ni          ( rst_n                              ),
+         .acc_c_mst_next ( master[out_mst_start:out_mst_stop] ),
+         .acc_c_slv      ( master[in_mst_start:in_mst_stop]   ),
+        .acc_c_mst       ( slave                              )
       );
       if (j==NumHier-1) begin : gen_byass_tieoff
         for (genvar l=out_mst_start; l<=out_mst_stop; l++) begin: gen_mst_tieoff
