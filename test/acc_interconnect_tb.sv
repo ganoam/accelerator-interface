@@ -343,7 +343,6 @@ module acc_interconnect_tb  #(
     .DataWidth     ( DataWidth     ),
     .HierAddrWidth ( HierAddrWidth ),
     .AccAddrWidth  ( AccAddrWidth  ),
-    .NumHier       ( NumHier       ),
     .HierLevel     ( 0             ),
     .NumReq        ( NumReq        ),
     .NumRsp        ( NumRsp        ),
@@ -356,5 +355,16 @@ module acc_interconnect_tb  #(
     .mst      ( master      ),
     .slv      ( slave       )
   );
+
+  for (genvar i=0; i<NumReq; i++) begin : gen_bypass_tieoff
+    assign master_next[i].q_ready = '0;
+    assign master_next[i].p_data0 = '0;
+    assign master_next[i].p_data1 = '0;
+    assign master_next[i].p_dual_writeback = '0;
+    assign master_next[i].p_id = '0;
+    assign master_next[i].p_rd = '0;
+    assign master_next[i].p_error = '0;
+    assign master_next[i].p_valid = '0;
+  end
 
 endmodule

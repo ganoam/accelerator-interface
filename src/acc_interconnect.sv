@@ -13,8 +13,6 @@ module acc_interconnect #(
   parameter int unsigned HierAddrWidth = -1,
   // Accelerator Address Portion
   parameter int unsigned AccAddrWidth  = -1,
-  // Number of Hierarchy levels
-  parameter int unsigned NumHier       = -1,
   // Hierarchy level
   parameter int unsigned HierLevel     = -1,
   // The number of requesters.
@@ -120,60 +118,34 @@ module acc_interconnect #(
   end
 
   // Bypass this hierarchy level
-  if ( NumHier-1 > HierLevel ) begin : gen_bypass_interconnect
-    for ( genvar i=0; i<NumReq; i++ ) begin : gen_bypass_path
-      // Offload path
-      assign mst_req_o[i].q = mst_req_i[i].q;
-      stream_demux #(
-        .N_OUP ( 2 )
-      ) offload_bypass_demux_i (
-        .inp_valid_i ( mst_req_i[i].q_valid                       ),
-        .inp_ready_o ( mst_rsp_o[i].q_ready                       ),
-        .oup_sel_i   ( mst_req_q_level[i] != HierLevel            ),
-        .oup_valid_o ( {mst_req_o[i].q_valid, mst_req_q_valid[i]} ),
-        .oup_ready_i ( {mst_rsp_i[i].q_ready, mst_rsp_q_ready[i]} )
-      );
+  for ( genvar i=0; i<NumReq; i++ ) begin : gen_bypass_path
+    // Offload path
+    assign mst_req_o[i].q = mst_req_i[i].q;
+    stream_demux #(
+      .N_OUP ( 2 )
+    ) offload_bypass_demux_i (
+      .inp_valid_i ( mst_req_i[i].q_valid                       ),
+      .inp_ready_o ( mst_rsp_o[i].q_ready                       ),
+      .oup_sel_i   ( mst_req_q_level[i] != HierLevel            ),
+      .oup_valid_o ( {mst_req_o[i].q_valid, mst_req_q_valid[i]} ),
+      .oup_ready_i ( {mst_rsp_i[i].q_ready, mst_rsp_q_ready[i]} )
+    );
 
-      // Response Path
-      stream_arbiter #(
-        .DATA_T  ( rsp_chan_t ),
-        .N_INP   ( 2     ),
-        .ARBITER ( "rr"  )
-      ) response_bypass_arbiter_i (
-        .clk_i       ( clk_i                                      ),
-        .rst_ni      ( rst_ni                                     ),
-        .inp_data_i  ( {mst_rsp_i[i].p, mst_rsp_p_chan[i]}        ),
-        .inp_valid_i ( {mst_rsp_i[i].p_valid, mst_rsp_p_valid[i]} ),
-        .inp_ready_o ( {mst_req_o[i].p_ready, mst_req_p_ready[i]} ),
-        .oup_data_o  ( mst_rsp_o[i].p                             ),
-        .oup_valid_o ( mst_rsp_o[i].p_valid                       ),
-        .oup_ready_i ( mst_req_i[i].p_ready                       )
-      );
-    end
-  end else begin : gen_no_bypass_interconnect
-    logic      [NumReq-1:0] unused_mst_rsp_q_ready;
-    rsp_chan_t [NumReq-1:0] unused_mst_rsp_p;
-    logic      [NumReq-1:0] unused_mst_rsp_p_valid;
-
-    for ( genvar i=0; i<NumReq; i++ ) begin : gen_offload_bypass_demux
-      // Direct assignments
-      // Offload path
-      assign mst_req_q_valid[i]   = mst_req_i[i].q_valid;
-      assign mst_rsp_o[i].q_ready = mst_rsp_q_ready[i];
-      assign mst_rsp_o[i].p       = mst_rsp_p_chan[i];
-      // Rsponse path
-      assign mst_rsp_o[i].p_valid = mst_rsp_p_valid[i];
-      assign mst_req_p_ready[i]   = mst_req_i[i].p_ready;
-
-      // Tie off unused signals
-      assign mst_req_o[i].q            = '0;
-      assign mst_req_o[i].q_valid      = 1'b0;
-      assign unused_mst_rsp_q_ready[i] = mst_rsp_i[i].q_ready;
-
-      assign unused_mst_rsp_p[i]       = mst_rsp_i[i].p;
-      assign unused_mst_rsp_p_valid[i] = mst_rsp_i[i].p_valid;
-      assign mst_req_o[i].p_ready      = 1'b0;
-    end
+    // Response Path
+    stream_arbiter #(
+      .DATA_T  ( rsp_chan_t ),
+      .N_INP   ( 2     ),
+      .ARBITER ( "rr"  )
+    ) response_bypass_arbiter_i (
+      .clk_i       ( clk_i                                      ),
+      .rst_ni      ( rst_ni                                     ),
+      .inp_data_i  ( {mst_rsp_i[i].p, mst_rsp_p_chan[i]}        ),
+      .inp_valid_i ( {mst_rsp_i[i].p_valid, mst_rsp_p_valid[i]} ),
+      .inp_ready_o ( {mst_req_o[i].p_ready, mst_req_p_ready[i]} ),
+      .oup_data_o  ( mst_rsp_o[i].p                             ),
+      .oup_valid_o ( mst_rsp_o[i].p_valid                       ),
+      .oup_ready_i ( mst_req_i[i].p_ready                       )
+    );
   end
 
   // offload path Xbar
@@ -232,8 +204,6 @@ module acc_interconnect_intf #(
   parameter int unsigned HierAddrWidth = -1,
   // Accelerator Address Portion
   parameter int unsigned AccAddrWidth  = -1,
-  // Number of Hierarchy levels
-  parameter int unsigned NumHier       = -1,
   // Hierarchy level
   parameter int unsigned HierLevel     = -1,
   // The number of requesters
@@ -280,7 +250,6 @@ module acc_interconnect_intf #(
     .DataWidth      ( DataWidth          ),
     .HierAddrWidth  ( HierAddrWidth      ),
     .AccAddrWidth   ( AccAddrWidth       ),
-    .NumHier        ( NumHier            ),
     .HierLevel      ( HierLevel          ),
     .NumReq         ( NumReq             ),
     .NumRsp         ( NumRsp             ),

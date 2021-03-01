@@ -379,7 +379,6 @@ module acc_cluster_interconnect_tb  #(
         .DataWidth     ( DataWidth      ),
         .HierAddrWidth ( HierAddrWidth  ),
         .AccAddrWidth  ( AccAddrWidth   ),
-        .NumHier       ( NumHier        ),
         .HierLevel     ( j              ),
         .NumReq        ( NumReq[j]      ),
         .NumRsp        ( NumRsp[j]      ),
@@ -392,6 +391,18 @@ module acc_cluster_interconnect_tb  #(
          .mst      ( master[in_mst_start:in_mst_stop]   ),
         .slv       ( slave                              )
       );
+      if (j==NumHier-1) begin : gen_byass_tieoff
+        for (genvar l=out_mst_start; l<=out_mst_stop; l++) begin: gen_mst_tieoff
+          assign master[l].q_ready = '0;
+          assign master[l].p_data0 = '0;
+          assign master[l].p_data1 = '0;
+          assign master[l].p_dual_writeback = '0;
+          assign master[l].p_id = '0;
+          assign master[l].p_rd = '0;
+          assign master[l].p_error = '0;
+          assign master[l].p_valid = '0;
+        end
+      end
     end
   end
 
