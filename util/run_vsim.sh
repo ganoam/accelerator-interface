@@ -17,5 +17,4 @@ call_vsim() {
 }
 
 call_vsim acc_adapter_tb
-call_vsim acc_cluster_interconnect_tb
 call_vsim acc_interconnect_tb

@@ -73,7 +73,7 @@ module acc_cluster_interconnect_tb  #(
   // ------
   //
   // Driver
-  typedef acc_test::rand_acc_master #(
+  typedef acc_test::rand_c_master #(
     // Acc bus interface paramaters;
     .DataWidth     ( DataWidth     ),
     .AccAddrWidth  ( AccAddrWidth  ),
@@ -87,7 +87,7 @@ module acc_cluster_interconnect_tb  #(
   ) acc_rand_master_t;
 
   // Monitor
-  typedef acc_test::acc_mst_monitor #(
+  typedef acc_test::acc_c_mst_monitor #(
     // Acc bus interface paramaters;
     .DataWidth ( DataWidth ),
     .AddrWidth ( AddrWidth ),
@@ -95,15 +95,15 @@ module acc_cluster_interconnect_tb  #(
     // Stimuli application and test time
     .TA ( ApplTime ),
     .TT ( TestTime )
-  ) acc_mst_monitor_t;
+  ) acc_c_mst_monitor_t;
 
-    ACC_BUS #(
+    ACC_C_BUS #(
       .AddrWidth ( AddrWidth ),
       .DataWidth ( DataWidth ),
       .IdWidth   ( 1         )
     ) master [(NumHier+1) * TotNumReq] ();
 
-    ACC_BUS_DV #(
+    ACC_C_BUS_DV #(
       .AddrWidth ( AddrWidth ),
       .DataWidth ( DataWidth ),
       .IdWidth   ( 1         )
@@ -111,26 +111,26 @@ module acc_cluster_interconnect_tb  #(
 
 
     for (genvar i=0; i<TotNumReq; i++) begin : gen_req_if_assignement
-      `ACC_ASSIGN(master[i], master_dv[i])
+      `ACC_C_ASSIGN(master[i], master_dv[i])
     end
 
-    acc_mst_monitor_t acc_mst_monitor [TotNumReq];
+    acc_c_c_mst_monitor_t acc_c_c_mst_monitor [TotNumReq];
     for (genvar i=0; i<TotNumReq; i++) begin : gen_mst_mon
       initial begin
-        acc_mst_monitor[i] = new(master_dv[i]);
+        acc_c_mst_monitor[i] = new(master_dv[i]);
         @(posedge rst_n);
-        acc_mst_monitor[i].monitor();
+        acc_c_mst_monitor[i].monitor();
       end
     end
 
-    acc_rand_master_t rand_acc_master [TotNumReq];
+    acc_rand_master_t rand_c_master [TotNumReq];
 
     for (genvar i=0; i<TotNumReq; i++) begin
       initial begin
-        rand_acc_master[i] = new (master_dv[i]);
-        rand_acc_master[i].reset();
+        rand_c_master[i] = new (master_dv[i]);
+        rand_c_master[i].reset();
         @(posedge rst_n);
-        rand_acc_master[i].run(NrRandomTransactions);
+        rand_c_master[i].run(NrRandomTransactions);
       end
     end
 
@@ -154,7 +154,7 @@ module acc_cluster_interconnect_tb  #(
       ) lvl_slv_rsp_t;
 
       // Monitor
-      typedef acc_test::acc_slv_monitor #(
+      typedef acc_test::acc_c_slv_monitor #(
         // Acc bus interface paramaters;
         .DataWidth ( DataWidth  ),
         .AddrWidth ( AddrWidth  ),
@@ -163,10 +163,10 @@ module acc_cluster_interconnect_tb  #(
         // Stimuli application and test time
         .TA ( ApplTime ),
         .TT ( TestTime )
-      ) acc_slv_monitor_t;
+      ) acc_c_slv_monitor_t;
 
       // Driver
-      typedef acc_test::rand_acc_slave #(
+      typedef acc_test::rand_c_slave #(
         // Acc bus interface paramaters;
         .DataWidth ( DataWidth  ),
         .AddrWidth ( AddrWidth  ),
@@ -174,15 +174,15 @@ module acc_cluster_interconnect_tb  #(
         // Stimuli application and test time
         .TA ( ApplTime ),
         .TT ( TestTime )
-      ) acc_rand_slave_t;
+      ) rand_c_slave_t;
 
-      ACC_BUS #(
+      ACC_C_BUS #(
         .AddrWidth ( AddrWidth  ),
         .DataWidth ( DataWidth  ),
         .IdWidth   ( ExtIdWidth )
       ) slave [NumRsp[j]] ();
 
-      ACC_BUS_DV #(
+      ACC_C_BUS_DV #(
         .AddrWidth ( AddrWidth  ),
         .DataWidth ( DataWidth  ),
         .IdWidth   ( ExtIdWidth )
@@ -190,25 +190,25 @@ module acc_cluster_interconnect_tb  #(
 
 
       for (genvar i=0; i<NumRsp[j]; i++) begin : gen_resp_if_assignement
-        `ACC_ASSIGN(slave_dv[i], slave[i])
+        `ACC_C_ASSIGN(slave_dv[i], slave[i])
       end
 
-      acc_slv_monitor_t acc_slv_monitor [NumRsp[j]];
+      acc_c_c_slv_monitor_t acc_c_c_slv_monitor [NumRsp[j]];
       for (genvar i=0; i<NumRsp[j]; i++) begin : gen_slv_mon
         initial begin
-          acc_slv_monitor[i] = new(slave_dv[i]);
+          acc_c_slv_monitor[i] = new(slave_dv[i]);
           @(posedge rst_n);
-          acc_slv_monitor[i].monitor();
+          acc_c_slv_monitor[i].monitor();
         end
       end
 
-      acc_rand_slave_t rand_acc_slave [NumRsp[j]];
+      rand_c_slave_t rand_c_slave [NumRsp[j]];
       for (genvar i=0; i<NumRsp[j]; i++) begin : gen_slv_driver
         initial begin
-          rand_acc_slave[i] = new (slave_dv[i]);
-          rand_acc_slave[i].reset();
+          rand_c_slave[i] = new (slave_dv[i]);
+          rand_c_slave[i].reset();
           @(posedge rst_n);
-          rand_acc_slave[i].run();
+          rand_c_slave[i].run();
         end
       end
 
@@ -258,8 +258,8 @@ module acc_cluster_interconnect_tb  #(
                   automatic lvl_slv_req_t req_slv_all[NumReq[j]];
                   // Master m has sent request to slave s.
                   // Check that slave i has received.
-                  acc_slv_monitor[s].req_mbx[m<<1].get(req_slv);
-                  acc_mst_monitor[M].req_mbx[S].get(req_mst);
+                  acc_c_slv_monitor[s].req_mbx[m<<1].get(req_slv);
+                  acc_c_mst_monitor[M].req_mbx[S].get(req_mst);
                   assert(mstslv_reqcompare(req_mst, req_slv)) else begin
                     $error("Request Mismatch");
                     $display("----------------------------------------");
@@ -274,8 +274,8 @@ module acc_cluster_interconnect_tb  #(
 
                       automatic int L=l+k*NumReq[j];
                       $display("Mailbox from Master %x", L);
-                      if (acc_slv_monitor[s].req_mbx[l<<1].num() != 0) begin
-                        acc_slv_monitor[s].req_mbx[l<<1].peek(req_slv_all[s]);
+                      if (acc_c_slv_monitor[s].req_mbx[l<<1].num() != 0) begin
+                        acc_c_slv_monitor[s].req_mbx[l<<1].peek(req_slv_all[s]);
                         req_slv_all[s].display();
                       end else begin
                         $display("empty");
@@ -309,22 +309,22 @@ module acc_cluster_interconnect_tb  #(
             forever begin
               automatic tb_mst_rsp_t rsp_mst;
               automatic bit rsp_sender_found;
-              if (acc_mst_monitor[M].rsp_mbx.num() != 0) begin
-                // acc_mst_monitor[M].rsp_mbx.peek(rsp_mst);
+              if (acc_c_mst_monitor[M].rsp_mbx.num() != 0) begin
+                // acc_c_mst_monitor[M].rsp_mbx.peek(rsp_mst);
                 // rsp_mst.display();
                 for (int s=0; s<NumRsp[j]; s++) begin
-                  if (acc_slv_monitor[s].rsp_mbx[m<<1].num() != 0) begin
+                  if (acc_c_slv_monitor[s].rsp_mbx[m<<1].num() != 0) begin
                     automatic tb_mst_rsp_t rsp_mst;
                     automatic lvl_slv_rsp_t rsp_slv;
-                    acc_mst_monitor[M].rsp_mbx.peek(rsp_mst);
-                    acc_slv_monitor[s].rsp_mbx[m<<1].peek(rsp_slv);
+                    acc_c_mst_monitor[M].rsp_mbx.peek(rsp_mst);
+                    acc_c_slv_monitor[s].rsp_mbx[m<<1].peek(rsp_slv);
                     // $display("slv rsp:");
                     // rsp_slv.display();
                     // $display("mst rsp:");
                     // rsp_mst.display();
                     if (mstslv_rspcompare(rsp_mst, rsp_slv)) begin
-                      acc_slv_monitor[s].rsp_mbx[m<<1].get(rsp_slv);
-                      acc_mst_monitor[M].rsp_mbx.get(rsp_mst);
+                      acc_c_slv_monitor[s].rsp_mbx[m<<1].get(rsp_slv);
+                      acc_c_mst_monitor[M].rsp_mbx.get(rsp_mst);
                       rsp_sender_found |= 1;
                       // rsp_mst.display();
                       // rsp_slv.display();
@@ -351,8 +351,8 @@ module acc_cluster_interconnect_tb  #(
       final begin
         for (int m=0; m<NumReq[j]<<1; m++) begin
           for (int s=0; s<NumRsp[j]; s++) begin
-            assert(acc_slv_monitor[s].req_mbx[m].num() == 0);
-            assert(acc_slv_monitor[s].rsp_mbx[m].num() == 0);
+            assert(acc_c_slv_monitor[s].req_mbx[m].num() == 0);
+            assert(acc_c_slv_monitor[s].rsp_mbx[m].num() == 0);
           end
         end
         $display("Checked for non-empty slave mailboxes on hierarchy level %0d, copy %0d", j,k);
@@ -410,8 +410,8 @@ module acc_cluster_interconnect_tb  #(
     for (int m=0; m<TotNumReq; m++) begin
       for (int l=0; l<NumHier; l++) begin
         for (int s=0; s<NumRsp[l]; s++) begin
-          assert(acc_mst_monitor[m].req_mbx[s].num() == 0);
-          assert(acc_mst_monitor[m].rsp_mbx.num() == 0);
+          assert(acc_c_mst_monitor[m].req_mbx[s].num() == 0);
+          assert(acc_c_mst_monitor[m].rsp_mbx.num() == 0);
         end
       end
     end

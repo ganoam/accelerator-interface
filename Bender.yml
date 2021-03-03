@@ -25,5 +25,4 @@ sources:
   - target: test
     files:
       - test/acc_interconnect_tb.sv
-      - test/acc_cluster_interconnect_tb.sv
       - test/acc_adapter_tb.sv
