@@ -24,12 +24,24 @@ package acc_test;
     rand logic [31:0]             data_op;
     rand logic [IdWidth-1:0]      id;
 
+    constraint id_lsb_c {
+      id[0] == 1'b0;
+    };
+
     // TODO: remove?
     typedef c_req_t # (
       .AddrWidth    ( AddrWidth    ),
       .DataWidth    ( DataWidth    ),
       .IdWidth      ( IdWidth      )
     ) int_c_req_t;
+
+    function do_compare (int_c_req_t req);
+      return addr      == req.addr      &&
+             data_arga == req.data_arga &&
+             data_argb == req.data_argb &&
+             data_argc == req.data_argc &&
+             data_op   == req.data_op;
+    endfunction
 
     task display;
       $display(
@@ -91,6 +103,14 @@ package acc_test;
               "\n"
             );
     endtask
+
+    function do_compare (int_c_rsp_t rsp);
+      return data0          == rsp.data0          &
+             data1          == rsp.data1          &
+             dual_writeback == rsp.dual_writeback &
+             error          == rsp.error          &
+             rd             == rsp.rd;
+    endfunction
   endclass
 
 
@@ -157,13 +177,14 @@ package acc_test;
     endtask
 
     task reset_slave;
-      bus.p_data0  <= '0;
-      bus.p_data1  <= '0;
-      bus.p_id     <= '0;
-      bus.p_rd     <= '0;
-      bus.p_error  <= '0;
-      bus.p_valid  <= '0;
-      bus.q_ready  <= '0;
+      bus.p_data0          <= '0;
+      bus.p_data1          <= '0;
+      bus.p_dual_writeback <= '0;
+      bus.p_id             <= '0;
+      bus.p_rd             <= '0;
+      bus.p_error          <= '0;
+      bus.p_valid          <= '0;
+      bus.q_ready          <= '0;
     endtask
 
     task cycle_start;
@@ -342,9 +363,10 @@ package acc_test;
     // Acc interface parameters
     parameter int DataWidth       = -1,
     parameter int AccAddrWidth    = -1,
-    parameter int HierAddrWidth   = -1,
+    parameter int AddrWidth       = -1,
     parameter int IdWidth         = -1,
     parameter int NumHier         = -1,
+    parameter int HierLevel       = -1,
     parameter int NumRsp[NumHier] = '{-1},
     // Stimuli application and test time
     parameter time         TA                  = 0ps,
@@ -355,12 +377,12 @@ package acc_test;
     parameter int unsigned RSP_MAX_WAIT_CYCLES = 20
   ) extends rand_c #(
       // Acc interface parameters
-      .AddrWidth ( AccAddrWidth + HierAddrWidth ),
-      .DataWidth ( DataWidth                    ),
-      .IdWidth   ( IdWidth                      ),
+      .DataWidth ( DataWidth ),
+      .AddrWidth ( AddrWidth ),
+      .IdWidth   ( IdWidth   ),
       // Stimuli application and test time
-      .TA(TA),
-      .TT(TT)
+      .TA ( TA ),
+      .TT ( TT )
     );
 
     int unsigned cnt = 0;
@@ -374,9 +396,9 @@ package acc_test;
     // Constructor.
     function new (
       virtual ACC_C_BUS_DV #(
-        .DataWidth ( DataWidth                    ),
-        .AddrWidth ( AccAddrWidth + HierAddrWidth ),
-        .IdWidth   ( IdWidth                      )
+        .DataWidth ( DataWidth ),
+        .AddrWidth ( AddrWidth ),
+        .IdWidth   ( IdWidth   )
       ) bus );
       super.new(bus);
     endfunction
@@ -396,7 +418,7 @@ package acc_test;
         this.cnt++;
         assert(req.randomize with
           {
-            addr[AddrWidth-1:AccAddrWidth] inside {[0:NumHier-1]};
+            addr[AddrWidth-1:AccAddrWidth] inside {[HierLevel:NumHier-1]};
             addr[AccAddrWidth-1:0]         inside {[0:NumRsp[addr[AddrWidth-1:AccAddrWidth]]-1]};
           }
         );
@@ -518,7 +540,6 @@ package acc_test;
     parameter int DataWidth    = -1,
     parameter int AddrWidth    = -1,
     parameter int IdWidth      = -1,
-    parameter int NumReq       = -1,
     // Stimuli application and test time
     parameter time  TA = 0ps,
     parameter time  TT = 0ps
@@ -554,6 +575,7 @@ package acc_test;
           automatic int_c_req_t req;
           this.drv.mon_req(req);
           // put in req mbox corresponding to the requester
+          //$display("slave monitor");
           //req.display();
           req_mbx[req.id].put(req);
         end
@@ -569,31 +591,32 @@ package acc_test;
 
   class acc_c_mst_monitor #(
     // Acc interface parameters
-    parameter int DataWidth    = -1,
-    parameter int AddrWidth    = -1,
-    parameter int IdWidth      = -1,
+    parameter int DataWidth     = -1,
+    parameter int AddrWidth     = -1,
+    parameter int AccAddrWidth  = -1,
+    parameter int IdWidth       = -1,
+    parameter int HierLevel     = -1,
     // Stimuli application and test time
     parameter time  TA = 0ps,
     parameter time  TT = 0ps
   ) extends rand_c #(
-        .DataWidth    ( DataWidth    ),
-        .AddrWidth    ( AddrWidth    ),
-        .IdWidth      ( IdWidth      ),
-        .TA           ( TA           ),
-        .TT           ( TT           )
+        .DataWidth ( DataWidth ),
+        .AddrWidth ( AddrWidth ),
+        .IdWidth   ( IdWidth   ),
+        .TA        ( TA        ),
+        .TT        ( TT        )
     );
 
-    // TODO: Too many mailboxes. Only need NumRsp, but difficult to reduce.
-    // Also change accordingly: mark XXX
-    mailbox req_mbx [AddrWidth**2];
+    mailbox req_mbx [AccAddrWidth**2];
+    mailbox req_mbx_fwd = new;
     mailbox rsp_mbx = new;
 
     // Constructor.
     function new (
       virtual ACC_C_BUS_DV #(
-        .DataWidth    ( DataWidth    ),
-        .AddrWidth    ( AddrWidth    ),
-        .IdWidth      ( IdWidth      )
+        .DataWidth ( DataWidth ),
+        .AddrWidth ( AddrWidth ),
+        .IdWidth   ( IdWidth   )
       ) bus);
       super.new(bus);
       foreach (this.req_mbx[ii]) req_mbx[ii] = new;
@@ -606,8 +629,15 @@ package acc_test;
         forever begin
           automatic int_c_req_t req;
           this.drv.mon_req(req);
-          // put in req mbox corresponding to the responder
-          req_mbx[req.addr].put(req);
+          //req.display();
+          // Check if request addresses this level
+          if (req.addr[AddrWidth-1:AccAddrWidth] == HierLevel) begin
+            // put in req mbox corresponding to the responder
+            req_mbx[req.addr[AccAddrWidth-1:0]].put(req);
+          end else begin
+            // put in fwd req mbx
+            req_mbx_fwd.put(req);
+          end
         end
         forever begin
           automatic int_c_rsp_t rsp;

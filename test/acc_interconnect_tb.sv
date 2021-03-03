@@ -3,27 +3,35 @@
 // SPDX-License-Identifier: SHL-0.51
 
 // Noam Gallmann <gnoam@live.com>
+//
+// Simulates one hierarchy level of the accelerator interconnect.
 
 `include "acc_interface/assign.svh"
 `include "acc_interface/typedef.svh"
 
 module acc_interconnect_tb  #(
-  parameter int unsigned NumReq       = 8,
-  parameter int unsigned NumRsp       = 5,
-  parameter int unsigned DataWidth    = 32,
-  parameter bit          RegisterReq  = 0,
-  parameter bit          RegisterRsp  = 0,
+  parameter int NumHier         = 3,
+  parameter int NumReq          = 8,
+  parameter int NumRsp[NumHier] = '{3,5,9},
+  parameter int HierLevel       = 1, // 0, .., NumHier-1
+  parameter int DataWidth       = 32,
+  parameter bit RegisterReq     = 0,
+  parameter bit RegisterRsp     = 0,
   // TB params
-  parameter int unsigned NrRandomTransactions = 1000
+  parameter int unsigned NrRandomTransactions = 10
 );
 
   // dependent parameters
-  localparam int unsigned AccAddrWidth  = cf_math_pkg::idx_width(NumRsp);
-  localparam int unsigned HierAddrWidth = 1;
+  localparam int unsigned MaxNumRsp     = acc_pkg::maxn(NumRsp, NumHier);
+  localparam int unsigned AccAddrWidth  = cf_math_pkg::idx_width(MaxNumRsp);
+  localparam int unsigned HierAddrWidth = cf_math_pkg::idx_width(NumHier);
   localparam int unsigned AddrWidth     = AccAddrWidth + HierAddrWidth;
   localparam int unsigned ExtIdWidth    = 1+ cf_math_pkg::idx_width(NumReq);
-  localparam int unsigned NumHier       = 1;
-  localparam int unsigned HierLevel     = 0;
+
+
+  initial begin
+    $display("blub");
+  end
 
 
   typedef acc_test::c_req_t # (
@@ -71,25 +79,35 @@ module acc_interconnect_tb  #(
     .AddrWidth ( AddrWidth ),
     .DataWidth ( DataWidth ),
     .IdWidth   ( 1         )
-  ) master_next [NumReq] ();
+  ) slave_next [NumReq] ();
+
+  ACC_C_BUS_DV #(
+    .AddrWidth ( AddrWidth ),
+    .DataWidth ( DataWidth ),
+    .IdWidth   ( 1         )
+  ) slave_next_dv [NumReq] (clk);
 
   ACC_C_BUS #(
     .AddrWidth ( AddrWidth  ),
     .DataWidth ( DataWidth  ),
     .IdWidth   ( ExtIdWidth )
-  ) slave [NumRsp] ();
+  ) slave [NumRsp[HierLevel]] ();
 
   ACC_C_BUS_DV #(
     .AddrWidth ( AddrWidth  ),
     .DataWidth ( DataWidth  ),
     .IdWidth   ( ExtIdWidth )
-  ) slave_dv [NumRsp] (clk);
+  ) slave_dv [NumRsp[HierLevel]] (clk);
 
-  for (genvar i=0; i<NumReq; i++) begin : gen_req_if_assignement
+  for (genvar i=0; i<NumReq; i++) begin : gen_mst_if_assignement
     `ACC_C_ASSIGN(master[i], master_dv[i])
   end
 
-  for (genvar i=0; i<NumRsp; i++) begin : gen_resp_if_assignement
+  for (genvar i=0; i<NumReq; i++) begin : gen_mst_next_if_assignement
+    `ACC_C_ASSIGN(slave_next_dv[i], slave_next[i])
+  end
+
+  for (genvar i=0; i<NumRsp[HierLevel]; i++) begin : gen_slv_if_assignement
     `ACC_C_ASSIGN(slave_dv[i], slave[i])
   end
 
@@ -117,44 +135,64 @@ module acc_interconnect_tb  #(
     .DataWidth ( DataWidth  ),
     .AddrWidth ( AddrWidth  ),
     .IdWidth   ( ExtIdWidth ),
-    .NumReq    ( NumReq     ),
     // Stimuli application and test time
     .TA ( ApplTime ),
     .TT ( TestTime )
   ) acc_c_slv_monitor_t;
 
+  typedef acc_test::acc_c_slv_monitor #(
+    // Acc bus interface paramaters;
+    .DataWidth ( DataWidth  ),
+    .AddrWidth ( AddrWidth  ),
+    .IdWidth   ( 1          ),
+    // Stimuli application and test time
+    .TA ( ApplTime ),
+    .TT ( TestTime )
+  ) acc_c_fwd_slv_monitor_t;
+
   typedef acc_test::acc_c_mst_monitor #(
     // Acc bus interface paramaters;
-    .DataWidth ( DataWidth ),
-    .AddrWidth ( AddrWidth ),
-    .IdWidth   ( 1         ),
+    .DataWidth    ( DataWidth    ),
+    .AddrWidth    ( AddrWidth    ),
+    .AccAddrWidth ( AccAddrWidth ),
+    .IdWidth      ( 1            ),
+    .HierLevel    ( HierLevel    ),
     // Stimuli application and test time
     .TA ( ApplTime ),
     .TT ( TestTime )
   ) acc_c_mst_monitor_t;
 
-  acc_c_mst_monitor_t acc_mst_monitor [NumReq];
+  acc_c_mst_monitor_t acc_c_mst_monitor [NumReq];
   for (genvar i=0; i<NumReq; i++) begin : gen_mst_mon
     initial begin
-      acc_mst_monitor[i] = new(master_dv[i]);
+      acc_c_mst_monitor[i] = new(master_dv[i]);
       @(posedge rst_n);
-      acc_mst_monitor[i].monitor();
+      acc_c_mst_monitor[i].monitor();
     end
   end
 
-  acc_c_slv_monitor_t acc_slv_monitor [NumRsp];
-  for (genvar i=0; i<NumRsp; i++) begin : gen_slv_mon
+  acc_c_slv_monitor_t acc_c_slv_monitor [NumRsp[HierLevel]];
+  for (genvar i=0; i<NumRsp[HierLevel]; i++) begin : gen_slv_mon
     initial begin
-      acc_slv_monitor[i] = new(slave_dv[i]);
+      acc_c_slv_monitor[i] = new(slave_dv[i]);
       @(posedge rst_n);
-      acc_slv_monitor[i].monitor();
+      acc_c_slv_monitor[i].monitor();
     end
+  end
 
+  acc_c_fwd_slv_monitor_t acc_c_fwd_slv_monitor [NumReq];
+  for (genvar i=0; i<NumReq; i++) begin : gen_fwd_slv_mon
+    initial begin
+      acc_c_fwd_slv_monitor[i] = new(slave_next_dv[i]);
+      @(posedge rst_n);
+      acc_c_fwd_slv_monitor[i].monitor();
+    end
   end
 
   // ------
   // Driver
   // ------
+  // Slaves on same interconnect HierLevel
   typedef acc_test::rand_c_slave #(
     // Acc bus interface paramaters;
     .DataWidth ( DataWidth  ),
@@ -163,10 +201,10 @@ module acc_interconnect_tb  #(
     // Stimuli application and test time
     .TA ( ApplTime ),
     .TT ( TestTime )
-  ) acc_rand_slave_t;
+  ) rand_c_slave_t;
 
-  acc_rand_slave_t rand_c_slave [NumRsp];
-  for (genvar i = 0; i < NumRsp; i++) begin : gen_slv_driver
+  rand_c_slave_t rand_c_slave [NumRsp[HierLevel]];
+  for (genvar i=0; i<NumRsp[HierLevel]; i++) begin : gen_slv_driver
     initial begin
       rand_c_slave[i] = new (slave_dv[i]);
       rand_c_slave[i].reset();
@@ -175,14 +213,40 @@ module acc_interconnect_tb  #(
     end
   end
 
+  // Slaves on higher interconnect level.
+  typedef acc_test::rand_c_slave #(
+    // Acc bus interface paramaters;
+    .DataWidth ( DataWidth ),
+    .AddrWidth ( AddrWidth ),
+    .IdWidth   ( 1         ),
+    // Stimuli application and test time
+    .TA ( ApplTime ),
+    .TT ( TestTime )
+  ) rand_c_fwd_slave_t;
+
+
+  // Requests / responses originating from higher interconnect levels
+  // have already been sorted to the appropriate requester port.
+  rand_c_fwd_slave_t rand_c_fwd_slave[NumReq];
+  for (genvar i=0; i<NumReq; i++) begin : gen_slv_fwd_driver
+    initial begin
+      rand_c_fwd_slave[i] = new (slave_next_dv[i]);
+      rand_c_fwd_slave[i].reset();
+      @(posedge rst_n);
+      rand_c_fwd_slave[i].run();
+    end
+  end
+
+
   typedef acc_test::rand_c_master #(
     // Acc bus interface paramaters;
-    .DataWidth     ( DataWidth     ),
-    .AccAddrWidth  ( AccAddrWidth  ),
-    .HierAddrWidth ( HierAddrWidth ),
-    .IdWidth       ( 1             ),
-    .NumRsp        ( '{NumRsp}     ),
-    .NumHier       ( NumHier       ),
+    .DataWidth    ( DataWidth    ),
+    .AccAddrWidth ( AccAddrWidth ),
+    .AddrWidth    ( AddrWidth    ),
+    .IdWidth      ( 1            ),
+    .NumRsp       ( NumRsp       ),
+    .NumHier      ( NumHier      ),
+    .HierLevel    ( HierLevel    ),
     // Stimuli application and test time
     .TA ( ApplTime ),
     .TT ( TestTime )
@@ -225,15 +289,16 @@ module acc_interconnect_tb  #(
   // TODO: Add possibility for no-response requests.
   //       For check if interconnect is correct, this is fine.
 
-  // For each master check that each request sent has been received by
-  // the correct slave.
+  // Request Path
+  // ------------
   initial begin
     automatic int nr_requests = 0;
     @(posedge rst_n);
     for (int kk=0; kk<NumReq; kk++) begin // masters k
       automatic int k=kk;
       fork
-        for (int ii=0; ii<NumRsp; ii++) begin // slaves i
+        // Check requests to same-level slaves
+        for (int ii=0; ii<NumRsp[HierLevel]; ii++) begin // slaves i
           fork
             automatic int i=ii;
             forever begin : check_req_path
@@ -242,8 +307,8 @@ module acc_interconnect_tb  #(
               automatic tb_slv_c_req_t req_slv_all[NumReq];
               // Master k has sent request to slave i.
               // Check that slave i has received.
-              acc_slv_monitor[i].req_mbx[k<<1].get(req_slv);
-              acc_mst_monitor[k].req_mbx[i].get(req_mst);
+              acc_c_slv_monitor[i].req_mbx[k<<1].get(req_slv);
+              acc_c_mst_monitor[k].req_mbx[i].get(req_mst);
               assert(mstslv_c_reqcompare(req_mst, req_slv)) else begin
                 $error("Request Mismatch");
                 $display("----------------------------------------");
@@ -256,8 +321,8 @@ module acc_interconnect_tb  #(
                 $display("Slave %x mailboxes:", i);
                 for (int j=0; j<NumReq; j++) begin
                   $display("Mailbox from Master %x", j);
-                  if (acc_slv_monitor[i].req_mbx[j<<1].num() != 0) begin
-                    acc_slv_monitor[i].req_mbx[j].peek(req_slv_all[i]);
+                  if (acc_c_slv_monitor[i].req_mbx[j<<1].num() != 0) begin
+                    acc_c_slv_monitor[i].req_mbx[j].peek(req_slv_all[i]);
                     req_slv_all[i].display();
                   end else begin
                     $display("empty");
@@ -265,7 +330,7 @@ module acc_interconnect_tb  #(
                 end
               end
               // check that request was intended for slave i
-              assert(req_mst.addr == i) else begin
+              assert(req_mst.addr[AccAddrWidth-1:0] == i) else begin
                 $error("Request Routing Error");
                 $display("req_slv:");
                 $display("--------");
@@ -273,11 +338,33 @@ module acc_interconnect_tb  #(
                 $display("Received at slave %x.", i);
                 $display("---------------------");
               end
-              // TODO: is this legal? (forked processes modifying same var)
               nr_requests++;
             end // -- forever
           join_none
-        end // -- for (int i=0; i<NumRsp; i++)
+        end // -- for (int i=0; i<NumRsp[HierLevel]; i++)
+
+        // Check forwarded requests
+        fork
+          forever begin : check_req_path
+            automatic tb_mst_c_req_t req_mst;
+            automatic tb_mst_c_req_t req_slv_fwd;
+            // Master k has sent interconnect forward port k
+            // Check that slave k has received.
+            acc_c_fwd_slv_monitor[k].req_mbx[0].get(req_slv_fwd);
+            acc_c_mst_monitor[k].req_mbx_fwd.get(req_mst);
+            assert(req_mst.do_compare(req_slv_fwd)) else begin
+              $error("Request Mismatch");
+              $display("----------------------------------------");
+              $display("Time: %0t, FWD Slave %x received:", $time, k);
+              $display("------------------");
+              req_slv_fwd.display();
+              $display("Master %x sent:", k);
+              $display("---------------");
+              req_mst.display();
+            end
+            nr_requests++;
+          end // -- forever
+        join_none
       join_none
     end
   end
@@ -291,28 +378,41 @@ module acc_interconnect_tb  #(
         automatic int j=jj;
         forever begin
           automatic tb_mst_c_rsp_t rsp_mst;
+          automatic tb_mst_c_rsp_t rsp_slv_fwd;
           automatic bit rsp_sender_found = 0;
-          acc_mst_monitor[j].rsp_mbx.get(rsp_mst);
+          acc_c_mst_monitor[j].rsp_mbx.get(rsp_mst);
           nr_responses++;
-          for (int l=0; l<NumRsp; l++) begin
-            if (acc_slv_monitor[l].rsp_mbx[j<<1].num() != 0) begin
+          // Check this interconnect level
+          for (int l=0; l<NumRsp[HierLevel]; l++) begin
+            //$display("Slave monitor %0x, rsp_mbx[%0x], mbox!=0: ",l, j<<1, acc_c_slv_monitor[l].rsp_mbx[j<<1].num() != 0);
+            if (acc_c_slv_monitor[l].rsp_mbx[j<<1].num() != 0) begin
               automatic tb_slv_c_rsp_t rsp_slv;
-              acc_slv_monitor[l].rsp_mbx[j<<1].peek(rsp_slv);
+              acc_c_slv_monitor[l].rsp_mbx[j<<1].peek(rsp_slv);
               if (mstslv_c_rspcompare(rsp_mst, rsp_slv)) begin
-                acc_slv_monitor[l].rsp_mbx[j<<1].get(rsp_slv);
-                rsp_sender_found = 1;
+                acc_c_slv_monitor[l].rsp_mbx[j<<1].get(rsp_slv);
+                rsp_sender_found |= 1;
                 break;
               end
             end
           end
+          // Check upper interconnect level (can only have originated
+          // from corresponding forward connection)
+          if (acc_c_fwd_slv_monitor[j].rsp_mbx[0].num() !=0 ) begin
+            acc_c_fwd_slv_monitor[j].rsp_mbx[0].peek(rsp_slv_fwd);
+            if (rsp_mst.do_compare(rsp_slv_fwd)) begin
+              acc_c_fwd_slv_monitor[j].rsp_mbx[0].get(rsp_slv_fwd);
+              rsp_sender_found |= 1;
+            end
+          end
+
           assert(rsp_sender_found) else begin
             $error( "Response Routing Error");
             $display("Master %0d received:", j);
             rsp_mst.display();
-            for (int l=0; l<NumRsp; l++) begin
+            for (int l=0; l<NumRsp[HierLevel]; l++) begin
               automatic tb_slv_c_rsp_t rsp_slv;
               $display( "Slave %0d -> Master %0d Mailbox", l, j);
-              if(acc_slv_monitor[l].rsp_mbx[j<<1].try_peek(rsp_slv)) begin
+              if(acc_c_slv_monitor[l].rsp_mbx[j<<1].try_peek(rsp_slv)) begin
                 rsp_slv.display();
               end else begin
                 $display("Empty");
@@ -329,42 +429,34 @@ module acc_interconnect_tb  #(
 
   final begin
     for (int i=0; i<NumReq; i++) begin
-      for (int j=0; j<NumRsp; j++) begin
-        assert(acc_mst_monitor[i].req_mbx[j].num() == 0);
-        assert(acc_mst_monitor[i].rsp_mbx.num() == 0);
-        assert(acc_slv_monitor[j].req_mbx[i].num() == 0);
-        assert(acc_slv_monitor[j].rsp_mbx[i].num() == 0);
+      assert(acc_c_mst_monitor[i].rsp_mbx.num() == 0);
+      assert(acc_c_mst_monitor[i].req_mbx_fwd.num() ==0);
+      assert(acc_c_fwd_slv_monitor[i].req_mbx[0].num()==0);
+      assert(acc_c_fwd_slv_monitor[i].rsp_mbx[0].num()==0);
+      for (int j=0; j<NumRsp[HierLevel]; j++) begin
+        assert(acc_c_mst_monitor[i].req_mbx[j].num() == 0);
+        assert(acc_c_slv_monitor[j].req_mbx[i].num() == 0);
+        assert(acc_c_slv_monitor[j].rsp_mbx[i].num() == 0);
       end
     end
     $display("Checked for non-empty mailboxes.");
   end
 
   acc_interconnect_intf #(
-    .DataWidth     ( DataWidth     ),
-    .HierAddrWidth ( HierAddrWidth ),
-    .AccAddrWidth  ( AccAddrWidth  ),
-    .HierLevel     ( 0             ),
-    .NumReq        ( NumReq        ),
-    .NumRsp        ( NumRsp        ),
-    .RegisterReq   ( RegisterReq   ),
-    .RegisterRsp   ( RegisterRsp   )
+    .DataWidth     ( DataWidth         ),
+    .HierAddrWidth ( HierAddrWidth     ),
+    .AccAddrWidth  ( AccAddrWidth      ),
+    .HierLevel     ( HierLevel         ),
+    .NumReq        ( NumReq            ),
+    .NumRsp        ( NumRsp[HierLevel] ),
+    .RegisterReq   ( RegisterReq       ),
+    .RegisterRsp   ( RegisterRsp       )
   ) dut (
-    .clk_i          ( clk         ),
-    .rst_ni         ( rst_n       ),
-    .acc_c_mst_next ( master_next ),
-    .acc_c_mst      ( slave       ),
-    .acc_c_slv      ( master      )
+    .clk_i          ( clk        ),
+    .rst_ni         ( rst_n      ),
+    .acc_c_mst_next ( slave_next ),
+    .acc_c_mst      ( slave      ),
+    .acc_c_slv      ( master     )
   );
-
-  for (genvar i=0; i<NumReq; i++) begin : gen_bypass_tieoff
-    assign master_next[i].q_ready = '0;
-    assign master_next[i].p_data0 = '0;
-    assign master_next[i].p_data1 = '0;
-    assign master_next[i].p_dual_writeback = '0;
-    assign master_next[i].p_id = '0;
-    assign master_next[i].p_rd = '0;
-    assign master_next[i].p_error = '0;
-    assign master_next[i].p_valid = '0;
-  end
 
 endmodule

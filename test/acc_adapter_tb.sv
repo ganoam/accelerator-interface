@@ -111,7 +111,6 @@ module acc_adapter_tb #(
     .DataWidth ( DataWidth ),
     .AddrWidth ( AddrWidth ),
     .IdWidth   ( 1         ),
-    .NumReq    ( 1         ),
     // Stimuli application and test time
     .TA ( ApplTime ),
     .TT ( TestTime )
@@ -206,10 +205,8 @@ module acc_adapter_tb #(
       .acc_prd_rsp_t ( tb_prd_rsp_t )
     )::do_check(x_req, prd_rsp, c_req);
 
-  // Scoreboards
-  // -----------
+  // Scoreboard
   // Request Path
-  // ------------
   // For each request entering the interconnect (acc_slave_monitor), check
   //  - Address corresponds to accepting predecoder
   //  - Operands generated from adapter_master using mux signals from
