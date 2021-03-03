@@ -8,32 +8,32 @@
 `include "acc_interface/typedef.svh"
 
 module acc_adapter #(
-  parameter int unsigned DataWidth         = 32,
-  parameter int          NumHier           = 3,
-  parameter int          NumRsp[NumHier]   = '{4,2,2},
-  parameter type         acc_req_t         = logic,
-  parameter type         acc_req_chan_t    = logic,
-  parameter type         acc_rsp_t         = logic,
-  parameter type         acc_adapter_req_t = logic,
-  parameter type         acc_adapter_rsp_t = logic,
+  parameter int unsigned DataWidth        = 32,
+  parameter int          NumHier          = 3,
+  parameter int          NumRsp[NumHier]  = '{4,2,2},
+  parameter type         acc_c_req_t      = logic,
+  parameter type         acc_c_req_chan_t = logic,
+  parameter type         acc_c_rsp_t      = logic,
+  parameter type         acc_x_req_t      = logic,
+  parameter type         acc_x_rsp_t      = logic,
   // Dependent parameter DO NOT OVERRIDE
   parameter int NumRspTot                  = acc_pkg::sumn(NumRsp, NumHier)
 ) (
   input clk_i,
   input rst_ni,
 
-  input  acc_adapter_req_t adapter_req_i,
-  output acc_adapter_rsp_t adapter_rsp_o,
+  input  acc_x_req_t acc_x_req_i,
+  output acc_x_rsp_t acc_x_rsp_o,
 
-  output acc_req_t acc_req_o,
-  input  acc_rsp_t acc_rsp_i,
+  output acc_c_req_t acc_c_req_o,
+  input  acc_c_rsp_t acc_c_rsp_i,
 
   // To predecoders
-  output acc_pkg::prd_req_t [NumRspTot-1:0] predecoder_req_o,
-  input  acc_pkg::prd_rsp_t  [NumRspTot-1:0] predecoder_rsp_i
+  output acc_pkg::acc_prd_req_t [NumRspTot-1:0] acc_prd_req_o,
+  input  acc_pkg::acc_prd_rsp_t [NumRspTot-1:0] acc_prd_rsp_i
 
   /*
-  // To compressed predecoders
+  // To compressed predecoders: -- integrate into predecoders
   input  logic [31:0] instr_rdata_if_i,
   output logic [31:0] instr_if_exp_o,
   output logic        instr_if_exp_valid_o,
@@ -58,16 +58,15 @@ module acc_adapter #(
 
   logic [31:0] instr_rdata_id;
 
-  logic          acc_out_fifo_ready;
-  logic          acc_out_fifo_valid;
-  acc_req_chan_t acc_out_fifo_req;
+  logic          acc_c_req_fifo_ready;
+  logic          acc_c_req_fifo_valid;
+  acc_c_req_chan_t acc_c_req_fifo_req;
 
   logic [4:0] instr_rd;
 
   logic [NumRspTot-1:0][31:0] acc_op_a;
   logic [NumRspTot-1:0][31:0] acc_op_b;
   logic [NumRspTot-1:0][31:0] acc_op_c;
-
 
   logic [2:0] use_rs;
 
@@ -76,8 +75,8 @@ module acc_adapter #(
   logic [NumRspTot-1:0] predecoder_accept_onehot;
 
   for (genvar i=0; i<NumRspTot; i++) begin : gen_acc_predecoder_sig_assign
-    assign predecoder_accept_onehot[i]      = predecoder_rsp_i[i].p_accept;
-    assign predecoder_req_o[i].q_instr_data = adapter_req_i.q.instr_data;
+    assign predecoder_accept_onehot[i]      = acc_prd_rsp_i[i].p_accept;
+    assign acc_prd_req_o[i].q_instr_data = acc_x_req_i.q.instr_data;
   end
 
   ////////////////////////
@@ -85,7 +84,7 @@ module acc_adapter #(
   ////////////////////////
 
   // Instruction data
-  assign instr_rdata_id   = adapter_req_i.q.instr_data;
+  assign instr_rdata_id   = acc_x_req_i.q.instr_data;
 
   // Destination register
   assign instr_rd = instr_rdata_id[11:7];
@@ -97,9 +96,9 @@ module acc_adapter #(
       acc_op_b[i] = '0;
       acc_op_c[i] = '0;
       if (predecoder_accept_onehot[i]) begin
-        acc_op_a[i] = predecoder_rsp_i[i].p_use_rs[0] ? adapter_req_i.q.rs1 : '0;
-        acc_op_b[i] = predecoder_rsp_i[i].p_use_rs[1] ? adapter_req_i.q.rs2 : '0;
-        acc_op_c[i] = predecoder_rsp_i[i].p_use_rs[2] ? adapter_req_i.q.rs3 : '0;
+        acc_op_a[i] = acc_prd_rsp_i[i].p_use_rs[0] ? acc_x_req_i.q.rs1 : '0;
+        acc_op_b[i] = acc_prd_rsp_i[i].p_use_rs[1] ? acc_x_req_i.q.rs2 : '0;
+        acc_op_c[i] = acc_prd_rsp_i[i].p_use_rs[2] ? acc_x_req_i.q.rs3 : '0;
       end
     end
   end
@@ -118,6 +117,7 @@ module acc_adapter #(
   //
   for (genvar i=0; i<NumHier; i++) begin : gen_acc_addr
     localparam SumNumRsp = i == 0 ? 0 : sumn(NumRsp, i);
+
     logic [NumRspTot-1:0] shift_predecoder_accept;
     assign shift_predecoder_accept = predecoder_accept_onehot >> SumNumRsp;
     assign predecoder_accept_lvl[i] =
@@ -155,47 +155,47 @@ module acc_adapter #(
     end
   end
 
-  assign acc_out_fifo_req.addr = {hier_addr, addr_lsb};
+  assign acc_c_req_fifo_req.addr = {hier_addr, addr_lsb};
 
   // Operands
   always_comb begin
-    acc_out_fifo_req.data_arga = '0;
-    acc_out_fifo_req.data_argb = '0;
-    acc_out_fifo_req.data_argc = '0;
+    acc_c_req_fifo_req.data_arga = '0;
+    acc_c_req_fifo_req.data_argb = '0;
+    acc_c_req_fifo_req.data_argc = '0;
     use_rs                     = '0;
-    adapter_rsp_o.k.writeback  = '0;
+    acc_x_rsp_o.k.writeback  = '0;
     for (int unsigned i=0; i<NumRspTot; i++) begin
-      acc_out_fifo_req.data_arga |= predecoder_accept_onehot[i] ? acc_op_a[i] : '0;
-      acc_out_fifo_req.data_argb |= predecoder_accept_onehot[i] ? acc_op_b[i] : '0;
-      acc_out_fifo_req.data_argc |= predecoder_accept_onehot[i] ? acc_op_c[i] : '0;
+      acc_c_req_fifo_req.data_arga |= predecoder_accept_onehot[i] ? acc_op_a[i] : '0;
+      acc_c_req_fifo_req.data_argb |= predecoder_accept_onehot[i] ? acc_op_b[i] : '0;
+      acc_c_req_fifo_req.data_argc |= predecoder_accept_onehot[i] ? acc_op_c[i] : '0;
       use_rs                     |=
-        predecoder_accept_onehot[i] ? predecoder_rsp_i[i].p_use_rs    : '0;
-      adapter_rsp_o.k.writeback  |=
-        predecoder_accept_onehot[i] ? predecoder_rsp_i[i].p_writeback : '0;
+        predecoder_accept_onehot[i] ? acc_prd_rsp_i[i].p_use_rs    : '0;
+      acc_x_rsp_o.k.writeback  |=
+        predecoder_accept_onehot[i] ? acc_prd_rsp_i[i].p_writeback : '0;
     end
   end
 
   // Instruction Data
-  assign acc_out_fifo_req.data_op = instr_rdata_id;
-  assign acc_out_fifo_req.id      = 1'b0;
+  assign acc_c_req_fifo_req.data_op = instr_rdata_id;
+  assign acc_c_req_fifo_req.id      = 1'b0;
 
   //////////////////
   // Flow Control //
   //////////////////
 
   // All source registers are ready if use_rs[i] == rs_valid[i] or ~use_rs[i];
-  assign sources_valid = (use_rs ~^ adapter_req_i.q.rs_valid | ~use_rs) == '1;
+  assign sources_valid = (use_rs ~^ acc_x_req_i.q.rs_valid | ~use_rs) == '1;
 
-  assign adapter_rsp_o.k.accept = |predecoder_accept_onehot;
-  assign acc_out_fifo_valid     =
-    adapter_req_i.q_valid && sources_valid && |predecoder_accept_onehot;
-  assign adapter_rsp_o.q_ready  =
-    ~adapter_rsp_o.k.accept || (sources_valid && acc_out_fifo_ready);
+  assign acc_x_rsp_o.k.accept = |predecoder_accept_onehot;
+  assign acc_c_req_fifo_valid     =
+    acc_x_req_i.q_valid && sources_valid && |predecoder_accept_onehot;
+  assign acc_x_rsp_o.q_ready  =
+    ~acc_x_rsp_o.k.accept || (sources_valid && acc_c_req_fifo_ready);
 
   // Forward accelerator response
-  assign adapter_rsp_o.p       = acc_rsp_i.p;
-  assign adapter_rsp_o.p_valid = acc_rsp_i.p_valid;
-  assign acc_req_o.p_ready     = adapter_req_i.p_ready;
+  assign acc_x_rsp_o.p       = acc_c_rsp_i.p;
+  assign acc_x_rsp_o.p_valid = acc_c_rsp_i.p_valid;
+  assign acc_c_req_o.p_ready     = acc_x_req_i.p_ready;
 
 
   /////////////////
@@ -206,18 +206,18 @@ module acc_adapter #(
   stream_fifo#(
     .FALL_THROUGH ( 1'b1       ),
     .DEPTH        ( 1          ),
-    .T            ( acc_req_chan_t )
-  ) acc_req_out_reg (
+    .T            ( acc_c_req_chan_t )
+  ) acc_acc_c_req_out_reg (
     .clk_i      ( clk_i              ),
     .rst_ni     ( rst_ni             ),
     .flush_i    ( 1'b0               ),
     .testmode_i ( 1'b0               ),
-    .valid_i    ( acc_out_fifo_valid ),
-    .ready_o    ( acc_out_fifo_ready ),
-    .data_i     ( acc_out_fifo_req   ),
-    .valid_o    ( acc_req_o.q_valid  ),
-    .ready_i    ( acc_rsp_i.q_ready  ),
-    .data_o     ( acc_req_o.q        ),
+    .valid_i    ( acc_c_req_fifo_valid ),
+    .ready_o    ( acc_c_req_fifo_ready ),
+    .data_i     ( acc_c_req_fifo_req   ),
+    .valid_o    ( acc_c_req_o.q_valid  ),
+    .ready_i    ( acc_c_rsp_i.q_ready  ),
+    .data_o     ( acc_c_req_o.q        ),
     .usage_o    ( /* unused */       )
   );
 
@@ -226,14 +226,14 @@ module acc_adapter #(
   `ifndef VERILATOR
   assert property (@(posedge clk_i) $onehot0(predecoder_accept_onehot)) else
       $error("Multiple accelerators accepeting request");
-  assert property (@(posedge clk_i) (adapter_req_i.q_valid && !adapter_rsp_o.q_ready)
+  assert property (@(posedge clk_i) (acc_x_req_i.q_valid && !acc_x_rsp_o.q_ready)
                                     |=> $stable(instr_rdata_id)) else
       $error ("instr_rdata_id is unstable");
-  assert property (@(posedge clk_i) (adapter_req_i.q_valid && !adapter_rsp_o.q_ready)
-                                    |=> adapter_req_i.q_valid) else
-      $error("adapter_req_i.q_valid has been taken away without a ready");
+  assert property (@(posedge clk_i) (acc_x_req_i.q_valid && !acc_x_rsp_o.q_ready)
+                                    |=> acc_x_req_i.q_valid) else
+      $error("acc_x_req_i.q_valid has been taken away without a ready");
   assert property (@(posedge clk_i)
-      (adapter_req_i.q_valid && adapter_rsp_o.q_ready && adapter_rsp_o.k.accept)
+      (acc_x_req_i.q_valid && acc_x_rsp_o.q_ready && acc_x_rsp_o.k.accept)
           |-> sources_valid) else
       $error("accepted offload request with invalid source registers");
   `endif
@@ -251,9 +251,9 @@ module acc_adapter_intf #(
   input clk_i,
   input rst_ni,
 
-  ACC_ADAPTER_BUS    mst,
-  ACC_BUS            slv,
-  ACC_PREDECODER_BUS prd [NumRspTot]
+  ACC_X_BUS   acc_x_mst,
+  ACC_C_BUS   acc_c_slv,
+  ACC_PRD_BUS acc_prd_mst [NumRspTot]
 );
   import acc_pkg::*;
 
@@ -266,46 +266,46 @@ module acc_adapter_intf #(
   typedef logic [DataWidth-1:0] data_t;
   typedef logic [4:0]           id_t;
 
-  `ACC_ADAPTER_TYPEDEF_ALL(acc_adapter, data_t, id_t)
-  `ACC_TYPEDEF_ALL(acc, addr_t, data_t, id_t)
+  `ACC_X_TYPEDEF_ALL(acc_x, data_t, id_t)
+  `ACC_C_TYPEDEF_ALL(acc_c, addr_t, data_t, id_t)
 
-  prd_req_t [NumRspTot-1:0] acc_predecoder_req;
-  prd_rsp_t [NumRspTot-1:0] acc_predecoder_rsp;
+  acc_prd_req_t [NumRspTot-1:0] acc_prd_req;
+  acc_prd_rsp_t [NumRspTot-1:0] acc_prd_rsp;
 
-  acc_adapter_req_t acc_adapter_req;
-  acc_adapter_rsp_t acc_adapter_rsp;
-  acc_req_t         acc_req;
-  acc_rsp_t         acc_rsp;
+  acc_x_req_t acc_x_req;
+  acc_x_rsp_t acc_x_rsp;
+  acc_c_req_t acc_c_req;
+  acc_c_rsp_t acc_c_rsp;
 
   acc_adapter #(
-    .DataWidth         ( DataWidth         ),
-    .NumHier           ( NumHier           ),
-    .NumRsp            ( NumRsp            ),
-    .acc_req_t         ( acc_req_t         ),
-    .acc_req_chan_t    ( acc_req_chan_t    ),
-    .acc_rsp_t         ( acc_rsp_t         ),
-    .acc_adapter_req_t ( acc_adapter_req_t ),
-    .acc_adapter_rsp_t ( acc_adapter_rsp_t )
+    .DataWidth        ( DataWidth        ),
+    .NumHier          ( NumHier          ),
+    .NumRsp           ( NumRsp           ),
+    .acc_c_req_t      ( acc_c_req_t      ),
+    .acc_c_req_chan_t ( acc_c_req_chan_t ),
+    .acc_c_rsp_t      ( acc_c_rsp_t      ),
+    .acc_x_req_t      ( acc_x_req_t      ),
+    .acc_x_rsp_t      ( acc_x_rsp_t      )
   ) acc_adapter_i (
-    .clk_i            ( clk_i              ),
-    .rst_ni           ( rst_ni             ),
-    .adapter_req_i    ( acc_adapter_req    ),
-    .adapter_rsp_o    ( acc_adapter_rsp    ),
-    .acc_req_o        ( acc_req            ),
-    .acc_rsp_i        ( acc_rsp            ),
-    .predecoder_req_o ( acc_predecoder_req ),
-    .predecoder_rsp_i ( acc_predecoder_rsp )
+    .clk_i         ( clk_i       ),
+    .rst_ni        ( rst_ni      ),
+    .acc_x_req_i   ( acc_x_req   ),
+    .acc_x_rsp_o   ( acc_x_rsp   ),
+    .acc_c_req_o   ( acc_c_req   ),
+    .acc_c_rsp_i   ( acc_c_rsp   ),
+    .acc_prd_req_o ( acc_prd_req ),
+    .acc_prd_rsp_i ( acc_prd_rsp )
   );
 
-  `ACC_ASSIGN_FROM_REQ(slv, acc_req)
-  `ACC_ASSIGN_TO_RESP(acc_rsp, slv)
+  `ACC_C_ASSIGN_FROM_REQ(acc_c_slv, acc_c_req)
+  `ACC_C_ASSIGN_TO_RESP(acc_c_rsp, acc_c_slv)
 
-  `ACC_ADAPTER_ASSIGN_TO_REQ(acc_adapter_req, mst)
-  `ACC_ADAPTER_ASSIGN_FROM_RESP(mst, acc_adapter_rsp)
+  `ACC_X_ASSIGN_TO_REQ(acc_x_req, acc_x_mst)
+  `ACC_X_ASSIGN_FROM_RESP(acc_x_mst, acc_x_rsp)
 
   for (genvar i=0; i<NumRspTot; i++) begin : gen_acc_predecoder_intf_assign
-    `ACC_PREDECODER_ASSIGN_FROM_REQ(prd[i], acc_predecoder_req[i])
-    `ACC_PREDECODER_ASSIGN_TO_RESP(acc_predecoder_rsp[i], prd[i])
+    `ACC_PRD_ASSIGN_FROM_REQ(acc_prd_mst[i], acc_prd_req[i])
+    `ACC_PRD_ASSIGN_TO_RESP(acc_prd_rsp[i], acc_prd_mst[i])
   end
 
 endmodule

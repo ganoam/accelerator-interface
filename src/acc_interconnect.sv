@@ -104,14 +104,14 @@ module acc_interconnect #(
 
   for (genvar i=0; i<NumRsp; i++) begin : gen_slv_req_assignment
     // Extend ID signal at slave side
-    `ACC_ASSIGN_Q_SIGNALS(assign, acc_c_mst_req_o[i].q, slv_req_q_chan[i], "id", {sender_id[i], 1'b0})
+    `ACC_C_ASSIGN_Q_SIGNALS(assign, acc_c_mst_req_o[i].q, slv_req_q_chan[i], "id", {sender_id[i], 1'b0})
     assign acc_c_mst_req_o[i].q_valid     = slv_req_q_valid[i];
     assign acc_c_mst_req_o[i].p_ready     = slv_req_p_ready[i];
   end
 
   for (genvar i=0; i<NumRsp; i++) begin : gen_mst_rsp_assignment
     // Discard upper bits of ID signal after xbar traversal.
-    `ACC_ASSIGN_P_SIGNALS(assign, slv_rsp_p_chan[i], acc_c_mst_rsp_i[i].p, "id", 1'b0)
+    `ACC_C_ASSIGN_P_SIGNALS(assign, slv_rsp_p_chan[i], acc_c_mst_rsp_i[i].p, "id", 1'b0)
     assign receiver_id[i]     = acc_c_mst_rsp_i[i].p.id[ExtIdWidth-1:1];
     assign slv_rsp_p_valid[i] = acc_c_mst_rsp_i[i].p_valid;
     assign slv_rsp_q_ready[i] = acc_c_mst_rsp_i[i].q_ready;
@@ -218,9 +218,9 @@ module acc_interconnect_intf #(
   input clk_i,
   input rst_ni,
 
-  ACC_BUS acc_c_slv       [NumReq],
-  ACC_BUS acc_c_mst_next  [NumReq],
-  ACC_BUS acc_c_mst       [NumRsp]
+  ACC_C_BUS acc_c_slv       [NumReq],
+  ACC_C_BUS acc_c_mst_next  [NumReq],
+  ACC_C_BUS acc_c_mst       [NumRsp]
 );
 
   localparam int unsigned IdxWidth   = cf_math_pkg::idx_width(NumReq);
@@ -234,8 +234,8 @@ module acc_interconnect_intf #(
 
   // This generates some unused typedefs. still cleaner than invoking macros
   // separately.
-  `ACC_TYPEDEF_ALL(acc_c, addr_t, data_t, in_id_t)
-  `ACC_TYPEDEF_ALL(acc_c_ext, addr_t, data_t, ext_id_t)
+  `ACC_C_TYPEDEF_ALL(acc_c, addr_t, data_t, in_id_t)
+  `ACC_C_TYPEDEF_ALL(acc_c_ext, addr_t, data_t, ext_id_t)
 
   acc_c_req_t [NumReq-1:0] acc_c_slv_req;
   acc_c_rsp_t [NumReq-1:0] acc_c_slv_rsp;
@@ -275,16 +275,16 @@ module acc_interconnect_intf #(
   );
 
   for (genvar i=0; i<NumReq; i++) begin : gen_slv_interface_assignement
-    `ACC_ASSIGN_TO_REQ(acc_c_slv_req[i], acc_c_slv[i])
-    `ACC_ASSIGN_FROM_RESP(acc_c_slv[i], acc_c_slv_rsp[i])
+    `ACC_C_ASSIGN_TO_REQ(acc_c_slv_req[i], acc_c_slv[i])
+    `ACC_C_ASSIGN_FROM_RESP(acc_c_slv[i], acc_c_slv_rsp[i])
   end
   for (genvar i=0; i<NumRsp; i++) begin : gen_mst_interface_assignement
-    `ACC_ASSIGN_FROM_REQ(acc_c_mst[i], acc_c_mst_req[i])
-    `ACC_ASSIGN_TO_RESP(acc_c_mst_rsp[i], acc_c_mst[i])
+    `ACC_C_ASSIGN_FROM_REQ(acc_c_mst[i], acc_c_mst_req[i])
+    `ACC_C_ASSIGN_TO_RESP(acc_c_mst_rsp[i], acc_c_mst[i])
   end
   for (genvar i=0; i<NumReq; i++) begin : gen_mst_next_interface_assignement
-    `ACC_ASSIGN_FROM_REQ(acc_c_mst_next[i], acc_c_mst_next_req[i])
-    `ACC_ASSIGN_TO_RESP(acc_c_mst_next_rsp[i], acc_c_mst_next[i])
+    `ACC_C_ASSIGN_FROM_REQ(acc_c_mst_next[i], acc_c_mst_next_req[i])
+    `ACC_C_ASSIGN_TO_RESP(acc_c_mst_next_rsp[i], acc_c_mst_next[i])
   end
 
 endmodule

@@ -1,4 +1,4 @@
-// Copyright 2020 ETH Zurich and University of Bologna.
+// Copyright 2020 ETH Zurich and University of Bologna.::
 // Solderpad Hardware License, Version 0.51, see LICENSE for details.
 // SPDX-License-Identifier: SHL-0.51
 
@@ -12,7 +12,7 @@ package acc_test;
   // Accelerator Interconnect Test Structures //
   //////////////////////////////////////////////
 
-  class req_t #(
+  class c_req_t #(
     parameter int AddrWidth    = -1,
     parameter int DataWidth    = -1,
     parameter int IdWidth      = -1
@@ -25,20 +25,20 @@ package acc_test;
     rand logic [IdWidth-1:0]      id;
 
     // TODO: remove?
-    typedef req_t # (
+    typedef c_req_t # (
       .AddrWidth    ( AddrWidth    ),
       .DataWidth    ( DataWidth    ),
       .IdWidth      ( IdWidth      )
-    ) int_req_t;
+    ) int_c_req_t;
 
     task display;
       $display(
-              "req.addr: %x\n",       addr,
-              "req.data_op: %x\n",    data_op,
-              "req.data_arga: %x\n",  data_arga,
-              "req.data_argb: %x\n",  data_argb,
-              "req.data_argc: %x\n",  data_argc,
-              "req.id: %x\n",         id,
+              "c_req.addr: %x\n",       addr,
+              "c_req.data_op: %x\n",    data_op,
+              "c_req.data_arga: %x\n",  data_arga,
+              "c_req.data_argb: %x\n",  data_argb,
+              "c_req.data_argc: %x\n",  data_argc,
+              "c_req.id: %x\n",         id,
               "\n"
             );
     endtask
@@ -50,11 +50,11 @@ package acc_test;
   // TODO: May not be possible. IdWidth parameter is still different, although
   // MARK: MARK0
   // not compared.
-  class compare_req #(
-    parameter type mst_req_t = logic,
-    parameter type slv_req_t = logic
+  class compare_c_req #(
+    parameter type mst_c_req_t = logic,
+    parameter type slv_c_req_t = logic
   );
-    static function do_compare(mst_req_t mst_req, slv_req_t slv_req);
+    static function do_compare(mst_c_req_t mst_req, slv_c_req_t slv_req);
       return mst_req.addr            == slv_req.addr      &&
              mst_req.data_arga       == slv_req.data_arga &&
              mst_req.data_argb       == slv_req.data_argb &&
@@ -64,7 +64,7 @@ package acc_test;
   endclass
 
 
-  class rsp_t #(
+  class c_rsp_t #(
     parameter int DataWidth    = -1,
     parameter int IdWidth      = -1
   );
@@ -75,19 +75,19 @@ package acc_test;
     logic [4:0]                rd; // not random!
     logic [IdWidth-1:0]        id;
 
-    typedef rsp_t # (
+    typedef c_rsp_t # (
       .DataWidth    ( DataWidth ),
       .IdWidth      ( IdWidth   )
-    ) int_rsp_t;
+    ) int_c_rsp_t;
 
     task display;
       $display(
-              "rsp.data0: %x\n",          data0,
-              "rsp.data1: %x\n",          data1,
-              "rsp.dual_writeback: %x\n", dual_writeback,
-              "rsp.error %x\n",           error,
-              "rsp.rd: %x\n",             rd,
-              "rsp.id: %x\n",             id,
+              "c_rsp.data0: %x\n",          data0,
+              "c_rsp.data1: %x\n",          data1,
+              "c_rsp.dual_writeback: %x\n", dual_writeback,
+              "c_rsp.error %x\n",           error,
+              "c_rsp.rd: %x\n",             rd,
+              "c_rsp.id: %x\n",             id,
               "\n"
             );
     endtask
@@ -97,11 +97,11 @@ package acc_test;
   // Compare rsps of different parameterizations.
   // Within an interconnect, requests may only differ only by IdWidh
   // TODO: See MARK0
-  class compare_rsp #(
-    parameter type mst_rsp_t = logic,
-    parameter type slv_rsp_t = logic
+  class compare_c_rsp #(
+    parameter type mst_c_rsp_t = logic,
+    parameter type slv_c_rsp_t = logic
   );
-    static function do_compare(mst_rsp_t mst_rsp, slv_rsp_t slv_rsp);
+    static function do_compare(mst_c_rsp_t mst_rsp, slv_c_rsp_t slv_rsp);
       return mst_rsp.data0          == slv_rsp.data0          &
              mst_rsp.data1          == slv_rsp.data1          &
              mst_rsp.dual_writeback == slv_rsp.dual_writeback &
@@ -110,7 +110,7 @@ package acc_test;
     endfunction
   endclass
 
-  class acc_driver #(
+  class acc_c_driver #(
     parameter int AddrWidth    = -1,
     parameter int DataWidth    = -1,
     parameter int IdWidth      = -1,
@@ -118,25 +118,25 @@ package acc_test;
     parameter time TT          = 0  // stimuli test time
   );
 
-    typedef req_t #(
+    typedef c_req_t #(
       .DataWidth ( DataWidth ),
       .AddrWidth ( AddrWidth ),
       .IdWidth   ( IdWidth   )
-    ) int_req_t;
+    ) int_c_req_t;
 
-    typedef rsp_t #(
+    typedef c_rsp_t #(
       .DataWidth ( DataWidth ),
       .IdWidth   ( IdWidth   )
-    ) int_rsp_t;
+    ) int_c_rsp_t;
 
-    virtual ACC_BUS_DV # (
+    virtual ACC_C_BUS_DV # (
       .DataWidth ( DataWidth ),
       .AddrWidth ( AddrWidth ),
       .IdWidth   ( IdWidth   )
     ) bus;
 
     function new(
-      virtual ACC_BUS_DV #(
+      virtual ACC_C_BUS_DV #(
         .DataWidth ( DataWidth ),
         .AddrWidth ( AddrWidth ),
         .IdWidth   ( IdWidth   )
@@ -175,7 +175,7 @@ package acc_test;
     endtask
 
     // Send a request.
-    task send_req (input int_req_t req);
+    task send_req (input int_c_req_t req);
       bus.q_addr      <= #TA req.addr;
       bus.q_data_op   <= #TA req.data_op;
       bus.q_data_arga <= #TA req.data_arga;
@@ -196,7 +196,7 @@ package acc_test;
     endtask
 
     // Send a response.
-    task send_rsp(input int_rsp_t rsp);
+    task send_rsp(input int_c_rsp_t rsp);
       bus.p_data0          <= #TA rsp.data0;
       bus.p_data1          <= #TA rsp.data1;
       bus.p_dual_writeback <= #TA rsp.dual_writeback;
@@ -217,7 +217,7 @@ package acc_test;
     endtask
 
     // Receive a request.
-    task recv_req (output int_req_t req );
+    task recv_req (output int_c_req_t req );
       bus.q_ready <= #TA 1;
       cycle_start();
       while (bus.q_valid != 1) begin cycle_end(); cycle_start(); end
@@ -233,7 +233,7 @@ package acc_test;
     endtask
 
     // Receive a response.
-    task recv_rsp (output int_rsp_t rsp);
+    task recv_rsp (output int_c_rsp_t rsp);
       bus.p_ready <= #TA 1;
       cycle_start();
       while (bus.p_valid != 1) begin cycle_end(); cycle_start(); end
@@ -249,7 +249,7 @@ package acc_test;
     endtask
 
     // Monitor request
-    task mon_req (output int_req_t req);
+    task mon_req (output int_c_req_t req);
       cycle_start();
       while (!(bus.q_valid && bus.q_ready)) begin cycle_end(); cycle_start(); end
       req = new;
@@ -263,7 +263,7 @@ package acc_test;
     endtask
 
     // Monitor response.
-    task mon_rsp (output int_rsp_t rsp);
+    task mon_rsp (output int_c_rsp_t rsp);
       cycle_start();
       while (!(bus.p_valid &&bus.p_ready)) begin cycle_end(); cycle_start(); end
       rsp                = new;
@@ -279,7 +279,7 @@ package acc_test;
   endclass
 
   // Super classes for random acc drivers
-  virtual class rand_acc #(
+  virtual class rand_c #(
     // Acc interface parameters
     parameter int DataWidth    = -1,
     parameter int AddrWidth    = -1,
@@ -290,18 +290,18 @@ package acc_test;
     parameter time TT = 0ps
   );
 
-    typedef req_t #(
+    typedef c_req_t #(
       .AddrWidth    ( AddrWidth    ),
       .DataWidth    ( DataWidth    ),
       .IdWidth      ( IdWidth      )
-    ) int_req_t;
+    ) int_c_req_t;
 
-    typedef rsp_t #(
+    typedef c_rsp_t #(
       .DataWidth    ( DataWidth  ),
       .IdWidth      ( IdWidth    )
-    ) int_rsp_t;
+    ) int_c_rsp_t;
 
-    typedef acc_test::acc_driver #(
+    typedef acc_test::acc_c_driver #(
       // Acc interface parameters
       .AddrWidth    ( AddrWidth    ),
       .DataWidth    ( DataWidth    ),
@@ -309,12 +309,12 @@ package acc_test;
       // Stimuli application and test time
       .TA(TA),
       .TT(TT)
-    ) acc_driver_t;
+    ) acc_c_driver_t;
 
-    acc_driver_t drv;
+    acc_c_driver_t drv;
 
     function new(
-      virtual ACC_BUS_DV #(
+      virtual ACC_C_BUS_DV #(
         .DataWidth    ( DataWidth    ),
         .AddrWidth    ( AddrWidth    ),
         .IdWidth      ( IdWidth      )
@@ -338,7 +338,7 @@ package acc_test;
   endclass
 
   // Generate random requests as a master device.
-  class rand_acc_master #(
+  class rand_c_master #(
     // Acc interface parameters
     parameter int DataWidth       = -1,
     parameter int AccAddrWidth    = -1,
@@ -353,7 +353,7 @@ package acc_test;
     parameter int unsigned REQ_MAX_WAIT_CYCLES = 20,
     parameter int unsigned RSP_MIN_WAIT_CYCLES = 1,
     parameter int unsigned RSP_MAX_WAIT_CYCLES = 20
-  ) extends rand_acc #(
+  ) extends rand_c #(
       // Acc interface parameters
       .AddrWidth ( AccAddrWidth + HierAddrWidth ),
       .DataWidth ( DataWidth                    ),
@@ -373,7 +373,7 @@ package acc_test;
 
     // Constructor.
     function new (
-      virtual ACC_BUS_DV #(
+      virtual ACC_C_BUS_DV #(
         .DataWidth ( DataWidth                    ),
         .AddrWidth ( AccAddrWidth + HierAddrWidth ),
         .IdWidth   ( IdWidth                      )
@@ -390,7 +390,7 @@ package acc_test;
 
     // Send random requests.
     task send_requests (input int n);
-      automatic int_req_t req = new;
+      automatic int_c_req_t req = new;
 
       repeat (n) begin
         this.cnt++;
@@ -411,7 +411,7 @@ package acc_test;
     //       We do not require that.
     task recv_response;
       while (!this.req_done || this.cnt > 0) begin
-        automatic int_rsp_t rsp;
+        automatic int_c_rsp_t rsp;
         this.cnt--;
         rand_wait(RSP_MIN_WAIT_CYCLES, RSP_MAX_WAIT_CYCLES);
         this.drv.recv_rsp(rsp);
@@ -419,7 +419,7 @@ package acc_test;
     endtask
   endclass
 
-  class rand_acc_slave #(
+  class rand_c_slave #(
     // Acc interface parameters
     parameter int AddrWidth    = -1,
     parameter int DataWidth    = -1,
@@ -431,7 +431,7 @@ package acc_test;
     parameter int unsigned REQ_MAX_WAIT_CYCLES = 10,
     parameter int unsigned RSP_MIN_WAIT_CYCLES = 0,
     parameter int unsigned RSP_MAX_WAIT_CYCLES = 10
-  ) extends rand_acc #(
+  ) extends rand_c #(
       // Acc interface parameters
       .AddrWidth ( AddrWidth ),
       .DataWidth ( DataWidth ),
@@ -457,7 +457,7 @@ package acc_test;
 
     /// Constructor.
     function new (
-      virtual ACC_BUS_DV #(
+      virtual ACC_C_BUS_DV #(
         .DataWidth    ( DataWidth    ),
         .AddrWidth    ( AddrWidth    ),
         .IdWidth      ( IdWidth      )
@@ -468,7 +468,7 @@ package acc_test;
 
     task recv_requests();
       forever begin
-        automatic int_req_t req;
+        automatic int_c_req_t req;
         rand_wait(REQ_MIN_WAIT_CYCLES, REQ_MAX_WAIT_CYCLES);
         this.drv.recv_req(req);
         req_mbx[req.id >> 1].put(req);
@@ -477,8 +477,8 @@ package acc_test;
 
     task send_responses();
       forever begin
-        automatic int_rsp_t rsp = new;
-        automatic int_req_t req;
+        automatic int_c_rsp_t rsp = new;
+        automatic int_c_req_t req;
         // generate random sequence of requesters.
         automatic int req_id[2**IdWidth];
         automatic bit req_found = 1'b0;
@@ -498,6 +498,7 @@ package acc_test;
         if (req_found==1'b1) begin
           // generate and send random response.
           assert(rsp.randomize());
+          // get Id + Rd from corresponding request.
           rsp.id = req.id;
           rsp.rd = req.data_op[11:7];
 
@@ -512,7 +513,7 @@ package acc_test;
     endtask
   endclass
 
-  class acc_slv_monitor #(
+  class acc_c_slv_monitor #(
     // Acc interface parameters
     parameter int DataWidth    = -1,
     parameter int AddrWidth    = -1,
@@ -521,7 +522,7 @@ package acc_test;
     // Stimuli application and test time
     parameter time  TA = 0ps,
     parameter time  TT = 0ps
-  ) extends rand_acc #(
+  ) extends rand_c #(
         .DataWidth    ( DataWidth    ),
         .AddrWidth    ( AddrWidth    ),
         .IdWidth      ( IdWidth      ),
@@ -534,7 +535,7 @@ package acc_test;
 
     // Constructor.
     function new (
-      virtual ACC_BUS_DV #(
+      virtual ACC_C_BUS_DV #(
         .DataWidth    ( DataWidth    ),
         .AddrWidth    ( AddrWidth    ),
         .IdWidth      ( IdWidth      )
@@ -550,14 +551,14 @@ package acc_test;
     task monitor;
       fork
         forever begin
-          automatic int_req_t req;
+          automatic int_c_req_t req;
           this.drv.mon_req(req);
           // put in req mbox corresponding to the requester
           //req.display();
           req_mbx[req.id].put(req);
         end
         forever begin
-          automatic int_rsp_t rsp;
+          automatic int_c_rsp_t rsp;
           this.drv.mon_rsp(rsp);
           // put in req mbox corresponding to the requester
           rsp_mbx[rsp.id].put(rsp);
@@ -566,7 +567,7 @@ package acc_test;
     endtask
   endclass
 
-  class acc_mst_monitor #(
+  class acc_c_mst_monitor #(
     // Acc interface parameters
     parameter int DataWidth    = -1,
     parameter int AddrWidth    = -1,
@@ -574,7 +575,7 @@ package acc_test;
     // Stimuli application and test time
     parameter time  TA = 0ps,
     parameter time  TT = 0ps
-  ) extends rand_acc #(
+  ) extends rand_c #(
         .DataWidth    ( DataWidth    ),
         .AddrWidth    ( AddrWidth    ),
         .IdWidth      ( IdWidth      ),
@@ -589,7 +590,7 @@ package acc_test;
 
     // Constructor.
     function new (
-      virtual ACC_BUS_DV #(
+      virtual ACC_C_BUS_DV #(
         .DataWidth    ( DataWidth    ),
         .AddrWidth    ( AddrWidth    ),
         .IdWidth      ( IdWidth      )
@@ -603,13 +604,13 @@ package acc_test;
     task monitor;
       fork
         forever begin
-          automatic int_req_t req;
+          automatic int_c_req_t req;
           this.drv.mon_req(req);
           // put in req mbox corresponding to the responder
           req_mbx[req.addr].put(req);
         end
         forever begin
-          automatic int_rsp_t rsp;
+          automatic int_c_rsp_t rsp;
           this.drv.mon_rsp(rsp);
           rsp_mbx.put(rsp);
         end
@@ -621,15 +622,7 @@ package acc_test;
   // Accelerator Adapter Test Structures //
   /////////////////////////////////////////
 
-  /*
-  class adapter_ack_t;
-    // ACK channel
-    rand logic       accept;
-    rand logic [1:0] writeback;
-  endclass
-  */
-
-  class adapter_req_t #(
+  class x_req_t #(
     parameter int DataWidth = -1
   );
     // REQ Channel
@@ -642,6 +635,7 @@ package acc_test;
     rand logic       accept;
     rand logic [1:0] writeback;
 
+    // Helper for randomization
     logic [2:0] last_rs_valid;
     function void post_randomize;
       last_rs_valid = rs_valid;
@@ -649,13 +643,13 @@ package acc_test;
 
     task display;
       $display(
-              "adp_req.instr_data = %x\n", instr_data,
-              "adp_req.rs1 = %x\n", rs1,
-              "adp_req.rs2 = %x\n", rs2,
-              "adp_req.rs3 = %x\n", rs3,
-              "adp_req.rs_valid = %x\n", rs_valid,
-              "adp_req.accept = %x\n", accept,
-              "adp_req.writeback = %x\n", writeback,
+              "x_req.instr_data = %x\n",  instr_data,
+              "x_req.rs1 = %x\n",         rs1,
+              "x_req.rs2 = %x\n",         rs2,
+              "x_req.rs3 = %x\n",         rs3,
+              "x_req.rs_valid = %x\n",    rs_valid,
+              "x_req.accept = %x\n",      accept,
+              "x_req.writeback = %x\n",   writeback,
               "\n"
             );
     endtask
@@ -663,7 +657,7 @@ package acc_test;
   endclass
 
 
-  class adapter_rsp_t #(
+  class x_rsp_t #(
     parameter DataWidth = -1
   );
     // RSP Channel
@@ -672,29 +666,40 @@ package acc_test;
     rand logic                 error;
     rand logic [4:0]           rd;
     rand logic                 dual_writeback;
+
+    task display;
+      $display(
+              "x_req.data0 = %x\n",           data0,
+              "x_req.data1 = %x\n",           data1,
+              "x_req.error = %x\n",           error,
+              "x_req.rd = %x\n",              rd,
+              "x_req.dual_writeback = %x\n",  dual_writeback,
+              "\n"
+            );
+    endtask
+
   endclass
 
-
-  class acc_adapter_driver #(
+  class acc_x_driver #(
     parameter int DataWidth = -1,
     parameter time TA       = 0, // stimuli application time
     parameter time TT       = 0  // stimuli test time
   );
 
-    typedef adapter_req_t #(
+    typedef x_req_t #(
       .DataWidth( DataWidth )
-    ) int_adapter_req_t;
+    ) int_x_req_t;
 
-    typedef adapter_rsp_t #(
+    typedef x_rsp_t #(
       .DataWidth( DataWidth )
-    ) int_adapter_rsp_t;
+    ) int_x_rsp_t;
 
-    virtual ACC_ADAPTER_BUS_DV #(
+    virtual ACC_X_BUS_DV #(
       .DataWidth(DataWidth)
     ) bus;
 
     function new(
-      virtual ACC_ADAPTER_BUS_DV #(
+      virtual ACC_X_BUS_DV #(
         .DataWidth(DataWidth)
       ) bus
     );
@@ -732,7 +737,7 @@ package acc_test;
     endtask
 
     // Send a request
-    task send_req (inout int_adapter_req_t req);
+    task send_req (inout int_x_req_t req);
       bus.q_instr_data <= #TA req.instr_data;
       bus.q_rs1        <= #TA req.rs1;
       bus.q_rs2        <= #TA req.rs2;
@@ -779,7 +784,7 @@ package acc_test;
     endtask
 
     // Send a response.
-    task send_rsp(input int_adapter_rsp_t rsp);
+    task send_rsp(input int_x_rsp_t rsp);
       bus.p_data0          <= #TA rsp.data0;
       bus.p_data1          <= #TA rsp.data1;
       bus.p_dual_writeback <= #TA rsp.dual_writeback;
@@ -805,7 +810,7 @@ package acc_test;
     // request.
     //
     // unused in current tesbenches. (acc_interconnect_tb and acc_adapter_tb)
-    task recv_req(inout int_adapter_req_t req);
+    task recv_req(inout int_x_req_t req);
       bus.q_ready     <= #TA 1;
       bus.k_accept    <= #TA req.accept;
       bus.k_writeback <= #TA req.writeback;
@@ -823,7 +828,7 @@ package acc_test;
     endtask
 
     // Receive a response.
-    task recv_rsp (output int_adapter_rsp_t rsp);
+    task recv_rsp (output int_x_rsp_t rsp);
       bus.p_ready <= #TA 1;
       cycle_start();
       while (bus.p_valid != 1) begin cycle_end(); cycle_start(); end
@@ -838,7 +843,7 @@ package acc_test;
     endtask
 
     // Monitor request
-    task mon_req (output int_adapter_req_t req);
+    task mon_req (output int_x_req_t req);
       cycle_start();
       while (!(bus.q_valid && bus.q_ready)) begin cycle_end(); cycle_start(); end
       req            = new;
@@ -853,7 +858,7 @@ package acc_test;
     endtask
 
     // Monitor response.
-    task mon_rsp (output int_adapter_rsp_t rsp);
+    task mon_rsp (output int_x_rsp_t rsp);
       cycle_start();
       while (!(bus.p_valid &&bus.p_ready)) begin cycle_end(); cycle_start(); end
       rsp                = new;
@@ -867,8 +872,8 @@ package acc_test;
 
   endclass
 
-  // Super Class for random acc_adapter drivers
-  virtual class rand_acc_adapter #(
+  // Super Class for random x drivers
+  virtual class rand_x #(
     // Acc Adapter interface parameters
     parameter int DataWidth = -1,
     // Stimuli application and test time
@@ -877,23 +882,23 @@ package acc_test;
   );
 
     // TODO: Remove? - no. used in child classes.
-    typedef adapter_req_t #(
+    typedef x_req_t #(
       .DataWidth(DataWidth)
-    ) int_adapter_req_t;
+    ) int_x_req_t;
 
-    typedef adapter_rsp_t #(
+    typedef x_rsp_t #(
       .DataWidth( DataWidth )
-    ) int_adapter_rsp_t;
+    ) int_x_rsp_t;
 
-    typedef acc_test::acc_adapter_driver #(
+    typedef acc_test::acc_x_driver #(
       .DataWidth ( DataWidth ),
       .TA        ( TA        ),
-      .TT(TT)) acc_adapter_driver_t;
+      .TT(TT)) acc_x_driver_t;
 
-    acc_adapter_driver_t drv;
+    acc_x_driver_t drv;
 
     function new(
-      virtual ACC_ADAPTER_BUS_DV #(
+      virtual ACC_X_BUS_DV #(
         .DataWidth(DataWidth)
       ) bus
     );
@@ -914,7 +919,7 @@ package acc_test;
     endtask
   endclass
 
-  class rand_acc_adapter_master #(
+  class rand_x_master #(
     parameter int DataWidth                    = -1,
     parameter time         TA                  = 0ps,
     parameter time         TT                  = 0ps,
@@ -922,10 +927,10 @@ package acc_test;
     parameter int unsigned REQ_MAX_WAIT_CYCLES = 20,
     parameter int unsigned RSP_MIN_WAIT_CYCLES = 1,
     parameter int unsigned RSP_MAX_WAIT_CYCLES = 20
-  ) extends rand_acc_adapter #(
-    .DataWidth(DataWidth),
-    .TA(TA),
-    .TT(TT)
+  ) extends rand_x #(
+    .DataWidth ( DataWidth ),
+    .TA        ( TA        ),
+    .TT        ( TT        )
   );
 
     int unsigned cnt = 0;
@@ -938,7 +943,7 @@ package acc_test;
 
     // Consructor
     function new(
-      virtual ACC_ADAPTER_BUS_DV #(
+      virtual ACC_X_BUS_DV #(
         .DataWidth(DataWidth)
       ) bus );
       super.new(bus);
@@ -953,7 +958,7 @@ package acc_test;
 
     // Send random requests
     task send_requests(input int n);
-      automatic int_adapter_req_t req = new;
+      automatic int_x_req_t req = new;
 
       repeat (n) begin
         this.cnt++;
@@ -967,7 +972,7 @@ package acc_test;
     // Receive response
     task recv_response;
       while (!this.req_done || this.cnt > 0) begin
-        automatic int_adapter_rsp_t rsp;
+        automatic int_x_rsp_t rsp;
         this.cnt--;
         rand_wait(RSP_MIN_WAIT_CYCLES, RSP_MAX_WAIT_CYCLES);
         this.drv.recv_rsp(rsp);
@@ -975,7 +980,7 @@ package acc_test;
     endtask
   endclass
 
-  class rand_acc_adapter_slave #(
+  class rand_x_slave #(
     parameter int DataWidth                    = -1,
     parameter time         TA                  = 0ps,
     parameter time         TT                  = 0ps,
@@ -983,7 +988,7 @@ package acc_test;
     parameter int unsigned REQ_MAX_WAIT_CYCLES = 20,
     parameter int unsigned RSP_MIN_WAIT_CYCLES = 1,
     parameter int unsigned RSP_MAX_WAIT_CYCLES = 20
-  ) extends rand_acc_adapter #(
+  ) extends rand_x #(
     .DataWidth(DataWidth),
     .TA(TA),
     .TT(TT)
@@ -993,7 +998,7 @@ package acc_test;
 
     task recv_requests ();
       forever begin
-        automatic int_adapter_req_t req;
+        automatic int_x_req_t req;
         rand_wait(REQ_MIN_WAIT_CYCLES, REQ_MAX_WAIT_CYCLES);
         this.drv.recv_req(req);
         if (req.k_writeback) begin
@@ -1005,8 +1010,8 @@ package acc_test;
 
     task send_responses();
       forever begin
-        automatic int_adapter_rsp_t rsp = new;
-        automatic int_adapter_req_t req;
+        automatic int_x_rsp_t rsp = new;
+        automatic int_x_req_t req;
         req_mbx.get(req);
         rand_wait(RSP_MIN_WAIT_CYCLES, RSP_MAX_WAIT_CYCLES);
         this.drv.send_rsp(rsp);
@@ -1015,11 +1020,11 @@ package acc_test;
 
   endclass
 
-  class acc_adapter_monitor#(
+  class acc_x_monitor#(
     parameter int DataWidth = -1,
     parameter time TA       = 0ps,
     parameter time TT       = 0ps
-  ) extends rand_acc_adapter #(
+  ) extends rand_x #(
     .DataWidth(DataWidth),
     .TA(TA),
     .TT(TT)
@@ -1031,7 +1036,7 @@ package acc_test;
 
     // Constructor
     function new(
-      virtual ACC_ADAPTER_BUS_DV #(
+      virtual ACC_X_BUS_DV #(
         .DataWidth( DataWidth )
       ) bus);
       super.new(bus);
@@ -1041,7 +1046,7 @@ package acc_test;
     task monitor;
       fork
         forever begin
-          automatic int_adapter_req_t req;
+          automatic int_x_req_t req;
           this.drv.mon_req(req);
           if (req.accept) begin
             req_mbx.put(req);
@@ -1050,7 +1055,7 @@ package acc_test;
           end
         end
         forever begin
-          int_adapter_rsp_t rsp;
+          int_x_rsp_t rsp;
           this.drv.mon_rsp(rsp);
           rsp_mbx.put(rsp);
         end
@@ -1064,7 +1069,7 @@ package acc_test;
   // Accelerator Predecoder Test Structures //
   ////////////////////////////////////////////
 
-  class predecoder_rsp_t;
+  class prd_rsp_t;
     rand logic       accept;
     rand logic [1:0] writeback;
     rand logic [2:0] use_rs;
@@ -1080,18 +1085,18 @@ package acc_test;
 
   endclass
 
-  class predecoder_req_t;
+  class prd_req_t;
     rand logic [31:0] instr_data;
   endclass
 
-  class acc_predecoder_driver #(
+  class acc_prd_driver #(
     parameter time TA = 0, // stimuli application time
     parameter time TT = 0  // stimuli test time
   );
 
-    virtual ACC_PREDECODER_BUS_DV bus;
+    virtual ACC_PRD_BUS_DV bus;
 
-    function new( virtual ACC_PREDECODER_BUS_DV bus);
+    function new( virtual ACC_PRD_BUS_DV bus);
       this.bus=bus;
     endfunction
 
@@ -1114,13 +1119,13 @@ package acc_test;
     endtask
 
     // Send a request
-    task send_req (input predecoder_req_t req);
+    task send_req (input prd_req_t req);
       bus.q_instr_data <= #TA req.instr_data;
     endtask
 
     // Send a response
     // Response is sent in the same cycle, a new request is detected
-    task send_rsp (input predecoder_rsp_t rsp);
+    task send_rsp (input prd_rsp_t rsp);
       // Predecoders respond entirely combinational
       bus.p_accept    <= #TA rsp.accept;
       bus.p_writeback <= #TA rsp.writeback;
@@ -1132,7 +1137,7 @@ package acc_test;
 
     // request and response are generated at the same time.
 
-    task mon_reqrsp (output predecoder_req_t req, output predecoder_rsp_t rsp);
+    task mon_reqrsp (output prd_req_t req, output prd_rsp_t rsp);
       // record request and response at each change of instr_data input.
       automatic logic [31:0] last_instr_data = bus.q_instr_data;
       cycle_start();
@@ -1152,27 +1157,27 @@ package acc_test;
 
   /*
   TODO: Maybe
-  class rand_acc_predecoder_master #(
+  class rand_prd_master #(
     parameter time TA = 0ps,
     parameter time TT = 0ps
   );
   */
 
- class rand_acc_predecoder #(
+ class rand_prd #(
     parameter time TA = 0ps,
     parameter time TT = 0ps
   );
 
-    typedef acc_test::acc_predecoder_driver #(
+    typedef acc_test::acc_prd_driver #(
       .TT(TT),
       .TA(TA)
-    ) acc_predecoder_driver_t;
+    ) acc_prd_driver_t;
 
-    acc_predecoder_driver_t drv;
+    acc_prd_driver_t drv;
 
-    virtual ACC_PREDECODER_BUS_DV bus;
+    virtual ACC_PRD_BUS_DV bus;
 
-    function new (virtual ACC_PREDECODER_BUS_DV bus);
+    function new (virtual ACC_PRD_BUS_DV bus);
       this.drv = new(bus);
     endfunction
 
@@ -1184,22 +1189,22 @@ package acc_test;
  // Does not simulate real behaviour of predecoders, but creates random
  // responses and accepting predecoder. (no defined instruction set for each
  // predecoder).
- class rand_acc_predecoder_slave_collective #(
+ class rand_prd_slave_collective #(
     parameter NumRspTot = -1,
     parameter time TA = 0ps,
     parameter time TT = 0ps
   );
 
-    typedef acc_test::acc_predecoder_driver #(
+    typedef acc_test::acc_prd_driver #(
       .TT(TT),
       .TA(TA)
-    ) acc_predecoder_driver_t;
+    ) acc_prd_driver_t;
 
-    acc_predecoder_driver_t drv[NumRspTot];
+    acc_prd_driver_t drv[NumRspTot];
 
-    virtual ACC_PREDECODER_BUS_DV bus [NumRspTot];
+    virtual ACC_PRD_BUS_DV bus [NumRspTot];
 
-    function new ( virtual ACC_PREDECODER_BUS_DV bus [NumRspTot] );
+    function new ( virtual ACC_PRD_BUS_DV bus [NumRspTot] );
       foreach(this.drv[ii]) this.drv[ii] = new(bus[ii]);
     endfunction
 
@@ -1220,7 +1225,7 @@ package acc_test;
 
     task run();
       // We generate random responses, not caring about the exact request.
-      automatic predecoder_rsp_t predecoder_rsp[NumRspTot];
+      automatic prd_rsp_t prd_rsp[NumRspTot];
       forever begin
 
         assert(std::randomize(accept_onehot) with {
@@ -1229,16 +1234,16 @@ package acc_test;
         );
         for (int i=0; i<NumRspTot; i++) begin
 
-          predecoder_rsp[i] = new;
-          assert(predecoder_rsp[i].randomize());
-          predecoder_rsp[i].accept = accept_onehot[i];
+          prd_rsp[i] = new;
+          assert(prd_rsp[i].randomize());
+          prd_rsp[i].accept = accept_onehot[i];
         end
         /*
         $display("accept_onehot: %x", accept_onehot);
         for (int i=0; i<NumRspTot; i++) begin
-            $display("Time: %0t, predecoder_rsp: %0d ",$time, i);
+            $display("Time: %0t, prd_rsp: %0d ",$time, i);
             $display("===================");
-          predecoder_rsp[i].display();
+          prd_rsp[i].display();
         end
         */
 
@@ -1246,7 +1251,7 @@ package acc_test;
           fork
             automatic int ii=i;
             //$display("Time: %0t, Fork: %0d", $time, ii);
-            this.drv[ii].send_rsp(predecoder_rsp[ii]);
+            this.drv[ii].send_rsp(prd_rsp[ii]);
           join_none
         end
         @(drv[0].bus.q_instr_data);
@@ -1254,16 +1259,16 @@ package acc_test;
     endtask
   endclass
 
-  class acc_predecoder_monitor #(
+  class acc_prd_monitor #(
     parameter time TA = 0ps,
     parameter time TT = 0ps
-  ) extends rand_acc_predecoder #(
+  ) extends rand_prd #(
     .TA(TA),
     .TT(TT)
   );
 
     // Constructor.
-    function new (virtual ACC_PREDECODER_BUS_DV bus);
+    function new (virtual ACC_PRD_BUS_DV bus);
       super.new(bus);
     endfunction
 
@@ -1275,8 +1280,8 @@ package acc_test;
     // Record req and rsp for accepted instructions
     task monitor;
       forever begin
-        automatic predecoder_req_t req;
-        automatic predecoder_rsp_t rsp;
+        automatic prd_req_t req;
+        automatic prd_rsp_t rsp;
         this.drv.mon_reqrsp(req, rsp);
         if (rsp.accept) begin
           req_mbx.put(req);
@@ -1288,21 +1293,21 @@ package acc_test;
   endclass
 
   class adp_check_req #(
-    parameter type acc_req_t = logic,
-    parameter type adp_req_t = logic,
-    parameter type prd_rsp_t = logic
+    parameter type acc_c_req_t = logic,
+    parameter type acc_x_req_t = logic,
+    parameter type acc_prd_rsp_t = logic
   );
 
     // Check construction of interconnect request from predecoder response
     // + adapter request.
-    static function do_check (adp_req_t adp_req, prd_rsp_t prd_rsp, acc_req_t acc_req);
+    static function do_check (acc_x_req_t x_req, acc_prd_rsp_t prd_rsp, acc_c_req_t c_req);
 
       // Check result (Address is checked externally.
-      return (acc_req.data_arga == (prd_rsp.use_rs[0] ? adp_req.rs1 : '0)) &&
-             (acc_req.data_argb == (prd_rsp.use_rs[1] ? adp_req.rs2 : '0)) &&
-             (acc_req.data_argc == (prd_rsp.use_rs[2] ? adp_req.rs3 : '0)) &&
-             (acc_req.id        == 1'b0)                                   &&
-             (acc_req.data_op   == adp_req.instr_data);
+      return (c_req.data_arga == (prd_rsp.use_rs[0] ? x_req.rs1 : '0)) &&
+             (c_req.data_argb == (prd_rsp.use_rs[1] ? x_req.rs2 : '0)) &&
+             (c_req.data_argc == (prd_rsp.use_rs[2] ? x_req.rs3 : '0)) &&
+             (c_req.id        == 1'b0)                                 &&
+             (c_req.data_op   == x_req.instr_data);
 
     endfunction
   endclass

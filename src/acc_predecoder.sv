@@ -6,16 +6,16 @@
 
 module acc_predecoder #(
   parameter int     NumInstr                          = -1,
-  parameter acc_pkg::offl_instr_t OfflInstr[NumInstr] = {-1}
+  parameter acc_pkg::acc_offl_instr_t OfflInstr[NumInstr] = {-1}
 ) (
 
-  input acc_pkg::prd_req_t prd_req_i,
-  output acc_pkg::prd_rsp_t prd_rsp_o
+  input acc_pkg::acc_prd_req_t prd_req_i,
+  output acc_pkg::acc_prd_rsp_t prd_rsp_o
 );
 
   import acc_pkg::*;
 
-  prd_rsp_t [NumInstr-1:0] instr_rsp;
+  acc_prd_rsp_t [NumInstr-1:0] instr_rsp;
   logic [NumInstr-1:0]     instr_sel;
 
   for (genvar i=0; i<NumInstr; i++) begin : gen_predecoder_selector
@@ -47,16 +47,16 @@ endmodule
 
 module acc_predecoder_intf #(
   parameter int NumInstr = -1,
-  parameter acc_pkg::offl_instr_t OfflInstr[NumInstr] = {-1}
+  parameter acc_pkg::acc_offl_instr_t OfflInstr[NumInstr] = {-1}
 ) (
-  ACC_PREDECODER_BUS prd
+  ACC_PRD_BUS prd
 );
 
-  acc_pkg::prd_req_t prd_req;
-  acc_pkg::prd_rsp_t prd_rsp;
+  acc_pkg::acc_prd_req_t prd_req;
+  acc_pkg::acc_prd_rsp_t prd_rsp;
 
-  `ACC_PREDECODER_ASSIGN_TO_RESP(prd_rsp, prd)
-  `ACC_PREDECODER_ASSIGN_FROM_REQ(prd, prd_req)
+  `ACC_PRD_ASSIGN_TO_RESP(prd_rsp, prd)
+  `ACC_PRD_ASSIGN_FROM_REQ(prd, prd_req)
 
 
   acc_predecoder #(

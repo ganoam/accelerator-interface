@@ -26,27 +26,27 @@ module acc_interconnect_tb  #(
   localparam int unsigned HierLevel     = 0;
 
 
-  typedef acc_test::req_t # (
+  typedef acc_test::c_req_t # (
     .AddrWidth ( AddrWidth ),
     .DataWidth ( DataWidth ),
     .IdWidth   ( 1         )
-  ) tb_mst_req_t;
+  ) tb_mst_c_req_t;
 
-  typedef acc_test::rsp_t # (
+  typedef acc_test::c_rsp_t # (
     .DataWidth ( DataWidth ),
     .IdWidth   ( 1         )
-  ) tb_mst_rsp_t;
+  ) tb_mst_c_rsp_t;
 
-  typedef acc_test::req_t # (
+  typedef acc_test::c_req_t # (
     .AddrWidth ( AddrWidth ),
     .DataWidth ( DataWidth ),
     .IdWidth   ( ExtIdWidth  )
-  ) tb_slv_req_t;
+  ) tb_slv_c_req_t;
 
-  typedef acc_test::rsp_t # (
+  typedef acc_test::c_rsp_t # (
     .DataWidth    ( DataWidth  ),
     .IdWidth      ( ExtIdWidth )
-  ) tb_slv_rsp_t;
+  ) tb_slv_c_rsp_t;
 
   // Timing params
   localparam time ClkPeriod = 10ns;
@@ -55,42 +55,42 @@ module acc_interconnect_tb  #(
 
   logic clk, rst_n;
 
-  ACC_BUS #(
+  ACC_C_BUS #(
     .AddrWidth ( AddrWidth ),
     .DataWidth ( DataWidth ),
     .IdWidth   ( 1         )
   ) master [NumReq] ();
 
-  ACC_BUS_DV #(
+  ACC_C_BUS_DV #(
     .AddrWidth ( AddrWidth ),
     .DataWidth ( DataWidth ),
     .IdWidth   ( 1         )
   ) master_dv [NumReq] (clk);
 
-  ACC_BUS #(
+  ACC_C_BUS #(
     .AddrWidth ( AddrWidth ),
     .DataWidth ( DataWidth ),
     .IdWidth   ( 1         )
   ) master_next [NumReq] ();
 
-  ACC_BUS #(
+  ACC_C_BUS #(
     .AddrWidth ( AddrWidth  ),
     .DataWidth ( DataWidth  ),
     .IdWidth   ( ExtIdWidth )
   ) slave [NumRsp] ();
 
-  ACC_BUS_DV #(
+  ACC_C_BUS_DV #(
     .AddrWidth ( AddrWidth  ),
     .DataWidth ( DataWidth  ),
     .IdWidth   ( ExtIdWidth )
   ) slave_dv [NumRsp] (clk);
 
   for (genvar i=0; i<NumReq; i++) begin : gen_req_if_assignement
-    `ACC_ASSIGN(master[i], master_dv[i])
+    `ACC_C_ASSIGN(master[i], master_dv[i])
   end
 
   for (genvar i=0; i<NumRsp; i++) begin : gen_resp_if_assignement
-    `ACC_ASSIGN(slave_dv[i], slave[i])
+    `ACC_C_ASSIGN(slave_dv[i], slave[i])
   end
 
   // ----------------
@@ -112,7 +112,7 @@ module acc_interconnect_tb  #(
   // -------
   // Monitor
   // -------
-  typedef acc_test::acc_slv_monitor #(
+  typedef acc_test::acc_c_slv_monitor #(
     // Acc bus interface paramaters;
     .DataWidth ( DataWidth  ),
     .AddrWidth ( AddrWidth  ),
@@ -121,9 +121,9 @@ module acc_interconnect_tb  #(
     // Stimuli application and test time
     .TA ( ApplTime ),
     .TT ( TestTime )
-  ) acc_slv_monitor_t;
+  ) acc_c_slv_monitor_t;
 
-  typedef acc_test::acc_mst_monitor #(
+  typedef acc_test::acc_c_mst_monitor #(
     // Acc bus interface paramaters;
     .DataWidth ( DataWidth ),
     .AddrWidth ( AddrWidth ),
@@ -131,9 +131,9 @@ module acc_interconnect_tb  #(
     // Stimuli application and test time
     .TA ( ApplTime ),
     .TT ( TestTime )
-  ) acc_mst_monitor_t;
+  ) acc_c_mst_monitor_t;
 
-  acc_mst_monitor_t acc_mst_monitor [NumReq];
+  acc_c_mst_monitor_t acc_mst_monitor [NumReq];
   for (genvar i=0; i<NumReq; i++) begin : gen_mst_mon
     initial begin
       acc_mst_monitor[i] = new(master_dv[i]);
@@ -142,7 +142,7 @@ module acc_interconnect_tb  #(
     end
   end
 
-  acc_slv_monitor_t acc_slv_monitor [NumRsp];
+  acc_c_slv_monitor_t acc_slv_monitor [NumRsp];
   for (genvar i=0; i<NumRsp; i++) begin : gen_slv_mon
     initial begin
       acc_slv_monitor[i] = new(slave_dv[i]);
@@ -155,7 +155,7 @@ module acc_interconnect_tb  #(
   // ------
   // Driver
   // ------
-  typedef acc_test::rand_acc_slave #(
+  typedef acc_test::rand_c_slave #(
     // Acc bus interface paramaters;
     .DataWidth ( DataWidth  ),
     .AddrWidth ( AddrWidth  ),
@@ -165,17 +165,17 @@ module acc_interconnect_tb  #(
     .TT ( TestTime )
   ) acc_rand_slave_t;
 
-  acc_rand_slave_t rand_acc_slave [NumRsp];
+  acc_rand_slave_t rand_c_slave [NumRsp];
   for (genvar i = 0; i < NumRsp; i++) begin : gen_slv_driver
     initial begin
-      rand_acc_slave[i] = new (slave_dv[i]);
-      rand_acc_slave[i].reset();
+      rand_c_slave[i] = new (slave_dv[i]);
+      rand_c_slave[i].reset();
       @(posedge rst_n);
-      rand_acc_slave[i].run();
+      rand_c_slave[i].run();
     end
   end
 
-  typedef acc_test::rand_acc_master #(
+  typedef acc_test::rand_c_master #(
     // Acc bus interface paramaters;
     .DataWidth     ( DataWidth     ),
     .AccAddrWidth  ( AccAddrWidth  ),
@@ -188,29 +188,29 @@ module acc_interconnect_tb  #(
     .TT ( TestTime )
   ) acc_rand_master_t;
 
-  acc_rand_master_t rand_acc_master [NumReq];
+  acc_rand_master_t rand_c_master [NumReq];
 
   for (genvar i = 0; i < NumReq; i++) begin
     initial begin
-      rand_acc_master[i] = new (master_dv[i]);
-      rand_acc_master[i].reset();
+      rand_c_master[i] = new (master_dv[i]);
+      rand_c_master[i].reset();
       @(posedge rst_n);
-      rand_acc_master[i].run(NrRandomTransactions);
+      rand_c_master[i].run(NrRandomTransactions);
     end
   end
 
   // Compare reqs of different parameterizations
-  let mstslv_reqcompare(req_mst, req_slv) =
-    acc_test::compare_req#(
-      .mst_req_t ( tb_mst_req_t ),
-      .slv_req_t ( tb_slv_req_t )
+  let mstslv_c_reqcompare(req_mst, req_slv) =
+    acc_test::compare_c_req#(
+      .mst_c_req_t ( tb_mst_c_req_t ),
+      .slv_c_req_t ( tb_slv_c_req_t )
     )::do_compare(req_mst, req_slv);
 
   // Compare rsps of different parameterizations
-  let mstslv_rspcompare(rsp_mst, rsp_slv) =
-    acc_test::compare_rsp#(
-      .mst_rsp_t ( tb_mst_rsp_t ),
-      .slv_rsp_t ( tb_slv_rsp_t )
+  let mstslv_c_rspcompare(rsp_mst, rsp_slv) =
+    acc_test::compare_c_rsp#(
+      .mst_c_rsp_t ( tb_mst_c_rsp_t ),
+      .slv_c_rsp_t ( tb_slv_c_rsp_t )
     )::do_compare(rsp_mst, rsp_slv);
 
   // ----------
@@ -237,14 +237,14 @@ module acc_interconnect_tb  #(
           fork
             automatic int i=ii;
             forever begin : check_req_path
-              automatic tb_mst_req_t req_mst;
-              automatic tb_slv_req_t req_slv;
-              automatic tb_slv_req_t req_slv_all[NumReq];
+              automatic tb_mst_c_req_t req_mst;
+              automatic tb_slv_c_req_t req_slv;
+              automatic tb_slv_c_req_t req_slv_all[NumReq];
               // Master k has sent request to slave i.
               // Check that slave i has received.
               acc_slv_monitor[i].req_mbx[k<<1].get(req_slv);
               acc_mst_monitor[k].req_mbx[i].get(req_mst);
-              assert(mstslv_reqcompare(req_mst, req_slv)) else begin
+              assert(mstslv_c_reqcompare(req_mst, req_slv)) else begin
                 $error("Request Mismatch");
                 $display("----------------------------------------");
                 $display("Time: %0t, Slave %x received:", $time, i);
@@ -290,15 +290,15 @@ module acc_interconnect_tb  #(
       fork
         automatic int j=jj;
         forever begin
-          automatic tb_mst_rsp_t rsp_mst;
+          automatic tb_mst_c_rsp_t rsp_mst;
           automatic bit rsp_sender_found = 0;
           acc_mst_monitor[j].rsp_mbx.get(rsp_mst);
           nr_responses++;
           for (int l=0; l<NumRsp; l++) begin
             if (acc_slv_monitor[l].rsp_mbx[j<<1].num() != 0) begin
-              automatic tb_slv_rsp_t rsp_slv;
+              automatic tb_slv_c_rsp_t rsp_slv;
               acc_slv_monitor[l].rsp_mbx[j<<1].peek(rsp_slv);
-              if (mstslv_rspcompare(rsp_mst, rsp_slv)) begin
+              if (mstslv_c_rspcompare(rsp_mst, rsp_slv)) begin
                 acc_slv_monitor[l].rsp_mbx[j<<1].get(rsp_slv);
                 rsp_sender_found = 1;
                 break;
@@ -310,7 +310,7 @@ module acc_interconnect_tb  #(
             $display("Master %0d received:", j);
             rsp_mst.display();
             for (int l=0; l<NumRsp; l++) begin
-              automatic tb_slv_rsp_t rsp_slv;
+              automatic tb_slv_c_rsp_t rsp_slv;
               $display( "Slave %0d -> Master %0d Mailbox", l, j);
               if(acc_slv_monitor[l].rsp_mbx[j<<1].try_peek(rsp_slv)) begin
                 rsp_slv.display();

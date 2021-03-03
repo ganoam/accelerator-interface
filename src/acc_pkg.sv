@@ -32,18 +32,18 @@ package acc_pkg;
     logic          p_accept;
     logic [1:0]    p_writeback;
     logic [2:0]    p_use_rs;
-  } prd_rsp_t;
+  } acc_prd_rsp_t;
 
   typedef struct packed {
     logic [31:0] q_instr_data;
-  } prd_req_t;
+  } acc_prd_req_t;
 
 
   typedef struct packed {
     logic [31:0]   instr_data;
     logic [31:0]   instr_mask;
-    prd_rsp_t      prd_rsp;
-  } offl_instr_t;
+    acc_prd_rsp_t      prd_rsp;
+  } acc_offl_instr_t;
 
 
 endpackage

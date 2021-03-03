@@ -26,8 +26,8 @@ module acc_adapter_tb #(
 
   // Timing params
   localparam time ClkPeriod = 10ns;
-  localparam time ApplTime =  2ns;
-  localparam time TestTime =  8ns;
+  localparam time ApplTime  = 2ns;
+  localparam time TestTime  = 8ns;
 
   logic clk, rst_n;
 
@@ -54,64 +54,59 @@ module acc_adapter_tb #(
     end
   end
 
-  typedef acc_test::req_t # (
+  typedef acc_test::c_req_t # (
     .AddrWidth ( AddrWidth ),
     .DataWidth ( DataWidth ),
     .IdWidth   ( 1         )
-  ) tb_req_t;
+  ) tb_c_req_t;
 
-  typedef acc_test::adapter_req_t #(
+  typedef acc_test::x_req_t #(
     .DataWidth ( DataWidth )
-  ) tb_adp_req_t;
+  ) tb_x_req_t;
 
-  typedef acc_test::predecoder_req_t tb_prd_req_t;
-  typedef acc_test::predecoder_rsp_t tb_prd_rsp_t;
-
-  /*
-  typedef acc_test::adapter_rsp_t #(
-    .DataWidth( DataWidth )
-  ) tb_adp_rsp_t;
-  */
+  typedef acc_test::prd_req_t tb_prd_req_t;
+  typedef acc_test::prd_rsp_t tb_prd_rsp_t;
 
   // From / to core
-  ACC_ADAPTER_BUS #(
+  ACC_X_BUS #(
     .DataWidth ( DataWidth )
-  ) master ();
+  ) x_master ();
 
-  ACC_ADAPTER_BUS_DV #(
+  ACC_X_BUS_DV #(
     .DataWidth ( DataWidth )
-  ) master_dv ( clk );
+  ) x_master_dv ( clk );
 
   // From / to interconnect
-  ACC_BUS #(
+  ACC_C_BUS #(
     .AddrWidth ( AddrWidth ),
     .DataWidth ( DataWidth ),
     .IdWidth   ( 1         )
-  ) slave ();
+  ) c_slave ();
 
-  ACC_BUS_DV #(
+  ACC_C_BUS_DV #(
     .AddrWidth ( AddrWidth ),
     .DataWidth ( DataWidth ),
     .IdWidth   ( 1         )
-  ) slave_dv ( clk );
+  ) c_slave_dv ( clk );
 
   // From / to predecoders
-  ACC_PREDECODER_BUS predecoder [NumRspTot] ();
+  ACC_PRD_BUS prd_master [NumRspTot] ();
 
-  ACC_PREDECODER_BUS_DV predecoder_dv [NumRspTot] ( clk );
+  ACC_PRD_BUS_DV prd_master_dv [NumRspTot] ( clk );
 
-  `ACC_ASSIGN(slave_dv, slave)
+  // Interface assignments
+  `ACC_C_ASSIGN(c_slave_dv, c_slave)
 
-  `ACC_ADAPTER_ASSIGN(master, master_dv)
+  `ACC_X_ASSIGN(x_master, x_master_dv)
 
   for (genvar i=0; i<NumRspTot; i++) begin : gen_predecoder_intf_assign
-    `ACC_PREDECODER_ASSIGN(predecoder_dv[i], predecoder[i])
+    `ACC_PRD_ASSIGN(prd_master_dv[i], prd_master[i])
   end
 
   // --------
   // Monitors
   // --------
-  typedef acc_test::acc_slv_monitor #(
+  typedef acc_test::acc_c_slv_monitor #(
     // Acc bus interface paramaters;
     .DataWidth ( DataWidth ),
     .AddrWidth ( AddrWidth ),
@@ -120,38 +115,38 @@ module acc_adapter_tb #(
     // Stimuli application and test time
     .TA ( ApplTime ),
     .TT ( TestTime )
-  ) acc_slv_monitor_t;
+  ) acc_c_slv_monitor_t;
 
-  typedef acc_test::acc_adapter_monitor #(
+  typedef acc_test::acc_x_monitor #(
     .DataWidth ( DataWidth ),
     .TA        ( ApplTime  ),
     .TT        ( TestTime  )
-  ) acc_adapter_monitor_t;
+  ) acc_x_monitor_t;
 
-  typedef acc_test::acc_predecoder_monitor #(
+  typedef acc_test::acc_prd_monitor #(
     .TA ( ApplTime ),
     .TT ( TestTime )
-  ) acc_predecoder_monitor_t;
+  ) acc_prd_monitor_t;
 
 
-  acc_slv_monitor_t acc_slv_monitor = new(slave_dv);
+  acc_c_slv_monitor_t acc_c_slv_monitor = new(c_slave_dv);
   initial begin
     @(posedge rst_n);
-    acc_slv_monitor.monitor();
+    acc_c_slv_monitor.monitor();
   end
 
-  acc_adapter_monitor_t acc_adapter_mst_monitor = new(master_dv);
+  acc_x_monitor_t acc_x_mst_monitor = new(x_master_dv);
   initial begin
     @(posedge rst_n);
-    acc_adapter_mst_monitor.monitor();
+    acc_x_mst_monitor.monitor();
   end
 
-  acc_predecoder_monitor_t acc_predecoder_monitor[NumRspTot];
+  acc_prd_monitor_t acc_prd_monitor[NumRspTot];
   for (genvar i=0; i<NumRspTot; i++) begin : gen_predecoder_monitor
     initial begin
-      acc_predecoder_monitor[i] = new(predecoder_dv[i]);
+      acc_prd_monitor[i] = new(prd_master_dv[i]);
       @(posedge rst_n);
-      acc_predecoder_monitor[i].monitor();
+      acc_prd_monitor[i].monitor();
     end
   end
 
@@ -159,58 +154,62 @@ module acc_adapter_tb #(
   // Drivers
   // -------
 
-  typedef acc_test::rand_acc_adapter_master#(
+  typedef acc_test::rand_x_master#(
     .DataWidth ( DataWidth ),
     .TA        ( ApplTime  ),
     .TT        ( TestTime  )
-  ) rand_acc_adapter_master_t;
+  ) rand_x_master_t;
 
-  typedef acc_test::rand_acc_slave#(
+  typedef acc_test::rand_c_slave#(
     .AddrWidth ( AddrWidth ),
     .DataWidth ( DataWidth ),
     .IdWidth   ( 1         ),
     .TA        ( ApplTime  ),
     .TT        ( TestTime  )
-  ) rand_acc_slave_t;
+  ) rand_c_slave_t;
 
-  typedef acc_test::rand_acc_predecoder_slave_collective #(
+  typedef acc_test::rand_prd_slave_collective #(
     .NumRspTot ( NumRspTot ),
     .TA        ( ApplTime  ),
     .TT        ( TestTime  )
-  ) rand_acc_predecoder_slv_coll_t;
+  ) rand_prd_slv_coll_t;
 
-  rand_acc_adapter_master_t rand_acc_adapter_master = new(master_dv);
+  rand_x_master_t rand_x_master = new(x_master_dv);
   initial begin
-    rand_acc_adapter_master.reset();
+    rand_x_master.reset();
     @(posedge rst_n);
-    rand_acc_adapter_master.run(NrRandomTransactions);
+    rand_x_master.run(NrRandomTransactions);
   end
 
-  rand_acc_predecoder_slv_coll_t rand_acc_predecoder_slv_coll = new(predecoder_dv);
+  rand_prd_slv_coll_t rand_prd_slv_coll = new(prd_master_dv);
   initial begin
-    rand_acc_predecoder_slv_coll.reset();
+    rand_prd_slv_coll.reset();
     @(posedge rst_n);
-    rand_acc_predecoder_slv_coll.run();
+    rand_prd_slv_coll.run();
   end
 
-  rand_acc_slave_t rand_acc_slave = new(slave_dv);
+  rand_c_slave_t rand_c_slave = new(c_slave_dv);
   initial begin
-    rand_acc_slave.reset();
+    rand_c_slave.reset();
     @(posedge rst_n);
     // For now, do not generate responses.
     // TODO: Check writeback through adapter.
-    rand_acc_slave.recv_requests();
+    //rand_c_slave.recv_requests();
+    rand_c_slave.run();
   end
 
   // Request generation checker
-  let check_req(adp_req, prd_rsp, acc_req) =
+  let check_req(x_req, prd_rsp, c_req) =
     acc_test::adp_check_req #(
-      .acc_req_t ( tb_req_t     ),
-      .adp_req_t ( tb_adp_req_t ),
-      .prd_rsp_t ( tb_prd_rsp_t )
-    )::do_check(adp_req, prd_rsp, acc_req);
+      .acc_c_req_t   ( tb_c_req_t   ),
+      .acc_x_req_t   ( tb_x_req_t   ),
+      .acc_prd_rsp_t ( tb_prd_rsp_t )
+    )::do_check(x_req, prd_rsp, c_req);
 
-  // Scoreboard
+  // Scoreboards
+  // -----------
+  // Request Path
+  // ------------
   // For each request entering the interconnect (acc_slave_monitor), check
   //  - Address corresponds to accepting predecoder
   //  - Operands generated from adapter_master using mux signals from
@@ -222,35 +221,35 @@ module acc_adapter_tb #(
     fork
       // Check accepted requests
       forever begin
-        automatic tb_adp_req_t adp_req;
-        automatic tb_req_t     acc_req;
+        automatic tb_x_req_t x_req;
+        automatic tb_c_req_t c_req;
         automatic tb_prd_rsp_t prd_rsp;
         automatic tb_prd_req_t prd_req;
         automatic int prd_id, i;
         // Wait for a request at the interconnect output
-        acc_slv_monitor.req_mbx[0].get(acc_req);
+        acc_c_slv_monitor.req_mbx[0].get(c_req);
 
         // get predecoder ID
-        prd_id = acc_req.addr[AccAddrWidth-1:0];
+        prd_id = c_req.addr[AccAddrWidth-1:0];
         i = 0;
-        while ( i != acc_req.addr[AddrWidth-1:AccAddrWidth]) begin
+        while ( i != c_req.addr[AddrWidth-1:AccAddrWidth]) begin
           prd_id += NumRsp[i];
           i++;
         end
         // get accepting predecoder response and request structures and
         // corresponding adapter request.
-        assert(acc_predecoder_monitor[prd_id].rsp_mbx.try_get(prd_rsp));
-        assert(acc_predecoder_monitor[prd_id].req_mbx.try_get(prd_req));
-        assert(acc_adapter_mst_monitor.req_mbx.try_get(adp_req));
+        assert(acc_prd_monitor[prd_id].rsp_mbx.try_get(prd_rsp));
+        assert(acc_prd_monitor[prd_id].req_mbx.try_get(prd_req));
+        assert(acc_x_mst_monitor.req_mbx.try_get(x_req));
         // Check we are talking about the same request.
-        assert((prd_req.instr_data ^ (adp_req.instr_data ^ acc_req.instr_data)) == '0);
+        assert((prd_req.instr_data ^ (x_req.instr_data ^ c_req.instr_data)) == '0);
         // Check accelerator request integrity
-        assert(check_req(adp_req, prd_rsp, acc_req)) else begin
+        assert(check_req(x_req, prd_rsp, c_req)) else begin
           $error("Request Assembly Error.");
           $display("===");
           $display("Adapter Request:");
           $display("---");
-          adp_req.display();
+          x_req.display();
           $display("---");
           $display("Predecoder Response:");
           $display("---");
@@ -258,7 +257,7 @@ module acc_adapter_tb #(
           $display("---");
           $display("Accelerator Request");
           $display("---");
-          acc_req.display();
+          c_req.display();
         end
         nr_requests++;
         $display("Time %t. Request Accepted. Total Requests: %0d", $time,nr_requests);
@@ -266,16 +265,16 @@ module acc_adapter_tb #(
 
       // check rejected requests
       forever begin
-        automatic tb_adp_req_t adp_req;
+        automatic tb_x_req_t x_req;
         // Wait for rejected request
-        acc_adapter_mst_monitor.req_mbx_rejected.get(adp_req);
+        acc_x_mst_monitor.req_mbx_rejected.get(x_req);
         // Check if any predecoder wanted to accept this request.
         for (int i = 0; i< NumRspTot; i++) begin
           automatic tb_prd_req_t prd_req;
-          if (acc_predecoder_monitor[i].req_mbx.try_peek(prd_req)) begin
+          if (acc_prd_monitor[i].req_mbx.try_peek(prd_req)) begin
             // Instruction data is `randc`
             // no repetitions in 2**32 samples
-            assert (prd_req.instr_data != adp_req.instr_data) else
+            assert (prd_req.instr_data != x_req.instr_data) else
               $error("Mistakenly rejected adapter request");
           end
         end
@@ -295,11 +294,11 @@ module acc_adapter_tb #(
 
   final begin
     for (int i=0; i<NumRspTot; i++) begin
-      assert(acc_predecoder_monitor[i].req_mbx.num() == 0);
+      assert(acc_prd_monitor[i].req_mbx.num() == 0);
     end
-    assert(acc_adapter_mst_monitor.req_mbx.num() == 0);
-    assert(acc_adapter_mst_monitor.req_mbx_rejected.num() == 0);
-    assert(acc_slv_monitor.req_mbx[0].num() == 0);
+    assert(acc_x_mst_monitor.req_mbx.num() == 0);
+    assert(acc_x_mst_monitor.req_mbx_rejected.num() == 0);
+    assert(acc_c_slv_monitor.req_mbx[0].num() == 0);
     $display("Checked for non-empty mailboxes (request path)");
   end
 
@@ -309,11 +308,11 @@ module acc_adapter_tb #(
     .NumHier   ( NumHier   ),
     .NumRsp    ( NumRsp    )
   ) dut (
-    .clk_i  ( clk        ),
-    .rst_ni ( rst_n      ),
-    .mst    ( master     ),
-    .slv    ( slave      ),
-    .prd    ( predecoder )
+    .clk_i       ( clk        ),
+    .rst_ni      ( rst_n      ),
+    .acc_x_mst   ( x_master   ),
+    .acc_c_slv   ( c_slave    ),
+    .acc_prd_mst ( prd_master )
   );
 
 

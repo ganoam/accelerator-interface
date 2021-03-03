@@ -17,7 +17,7 @@
 // offloading entity must be aware if a write-back is to be expected.
 // For further details see docs/index.md.
 
-interface ACC_BUS #(
+interface ACC_C_BUS #(
   // ISA bit width
   parameter int unsigned DataWidth    = 32,
   // Address Width
@@ -62,7 +62,7 @@ interface ACC_BUS #(
 
 endinterface
 
-interface ACC_BUS_DV #(
+interface ACC_C_BUS_DV #(
   // ISA bit width
   parameter int unsigned DataWidth       = 32,
   // Address Width
@@ -134,7 +134,7 @@ interface ACC_BUS_DV #(
 
 endinterface
 
-interface ACC_ADAPTER_BUS #(
+interface ACC_X_BUS #(
   // ISA bit Width
   parameter int DataWidth = 32
 );
@@ -178,7 +178,7 @@ interface ACC_ADAPTER_BUS #(
 
 endinterface
 
-interface ACC_ADAPTER_BUS_DV #(
+interface ACC_X_BUS_DV #(
   // ISA bit Width
   parameter int DataWidth = 32
 
@@ -204,9 +204,9 @@ interface ACC_ADAPTER_BUS_DV #(
   // Response Channel (P)
   data_t      p_data0;
   data_t      p_data1;
-  logic       p_dual_writeback;
-  logic [4:0] p_rd;
   logic       p_error;
+  logic [4:0] p_rd;
+  logic       p_dual_writeback;
   logic       p_valid;
   logic       p_ready;
 
@@ -254,7 +254,7 @@ interface ACC_ADAPTER_BUS_DV #(
   // pragma translate_on
 endinterface
 
-interface ACC_PREDECODER_BUS;
+interface ACC_PRD_BUS;
 
 
   logic [31:0]       q_instr_data;
@@ -274,7 +274,7 @@ interface ACC_PREDECODER_BUS;
 
 endinterface
 
-interface ACC_PREDECODER_BUS_DV (
+interface ACC_PRD_BUS_DV (
   input clk_i
 );
 
