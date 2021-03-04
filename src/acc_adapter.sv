@@ -58,8 +58,8 @@ module acc_adapter #(
 
   logic [31:0] instr_rdata_id;
 
-  logic          acc_c_req_fifo_ready;
-  logic          acc_c_req_fifo_valid;
+  logic            acc_c_req_fifo_ready;
+  logic            acc_c_req_fifo_valid;
   acc_c_req_chan_t acc_c_req_fifo_req;
 
   logic [4:0] instr_rd;
@@ -71,6 +71,7 @@ module acc_adapter #(
   logic [2:0] use_rs;
 
   logic sources_valid;
+  logic rd_clean;
 
   logic [NumRspTot-1:0] predecoder_accept_onehot;
 
@@ -162,15 +163,15 @@ module acc_adapter #(
     acc_c_req_fifo_req.data_arga = '0;
     acc_c_req_fifo_req.data_argb = '0;
     acc_c_req_fifo_req.data_argc = '0;
-    use_rs                     = '0;
-    acc_x_rsp_o.k.writeback  = '0;
+    use_rs                       = '0;
+    acc_x_rsp_o.k.writeback      = '0;
     for (int unsigned i=0; i<NumRspTot; i++) begin
       acc_c_req_fifo_req.data_arga |= predecoder_accept_onehot[i] ? acc_op_a[i] : '0;
       acc_c_req_fifo_req.data_argb |= predecoder_accept_onehot[i] ? acc_op_b[i] : '0;
       acc_c_req_fifo_req.data_argc |= predecoder_accept_onehot[i] ? acc_op_c[i] : '0;
-      use_rs                     |=
+      use_rs                       |=
         predecoder_accept_onehot[i] ? acc_prd_rsp_i[i].p_use_rs    : '0;
-      acc_x_rsp_o.k.writeback  |=
+      acc_x_rsp_o.k.writeback      |=
         predecoder_accept_onehot[i] ? acc_prd_rsp_i[i].p_writeback : '0;
     end
   end
@@ -184,18 +185,21 @@ module acc_adapter #(
   //////////////////
 
   // All source registers are ready if use_rs[i] == rs_valid[i] or ~use_rs[i];
-  assign sources_valid = (use_rs ~^ acc_x_req_i.q.rs_valid | ~use_rs) == '1;
+  assign sources_valid = ((use_rs ~^ acc_x_req_i.q.rs_valid) | ~use_rs) == '1;
+  // Destination registers are clean, if writeback expeted. (WAW-hazard)
+  assign rd_clean =
+      ((acc_x_rsp_o.k.writeback ~^ acc_x_req_i.q.rd_clean) | ~acc_x_rsp_o.k.writeback) == '1;
 
   assign acc_x_rsp_o.k.accept = |predecoder_accept_onehot;
-  assign acc_c_req_fifo_valid     =
-    acc_x_req_i.q_valid && sources_valid && |predecoder_accept_onehot;
+  assign acc_c_req_fifo_valid =
+    acc_x_req_i.q_valid && sources_valid  && rd_clean && |predecoder_accept_onehot;
   assign acc_x_rsp_o.q_ready  =
-    ~acc_x_rsp_o.k.accept || (sources_valid && acc_c_req_fifo_ready);
+    ~acc_x_rsp_o.k.accept || (sources_valid  && rd_clean && acc_c_req_fifo_ready);
 
   // Forward accelerator response
   assign acc_x_rsp_o.p       = acc_c_rsp_i.p;
   assign acc_x_rsp_o.p_valid = acc_c_rsp_i.p_valid;
-  assign acc_c_req_o.p_ready     = acc_x_req_i.p_ready;
+  assign acc_c_req_o.p_ready = acc_x_req_i.p_ready;
 
 
   /////////////////
@@ -204,21 +208,21 @@ module acc_adapter #(
 
   // To acc interconnect.
   stream_fifo#(
-    .FALL_THROUGH ( 1'b1       ),
-    .DEPTH        ( 1          ),
+    .FALL_THROUGH ( 1'b1             ),
+    .DEPTH        ( 1                ),
     .T            ( acc_c_req_chan_t )
   ) acc_acc_c_req_out_reg (
-    .clk_i      ( clk_i              ),
-    .rst_ni     ( rst_ni             ),
-    .flush_i    ( 1'b0               ),
-    .testmode_i ( 1'b0               ),
+    .clk_i      ( clk_i                ),
+    .rst_ni     ( rst_ni               ),
+    .flush_i    ( 1'b0                 ),
+    .testmode_i ( 1'b0                 ),
     .valid_i    ( acc_c_req_fifo_valid ),
     .ready_o    ( acc_c_req_fifo_ready ),
     .data_i     ( acc_c_req_fifo_req   ),
     .valid_o    ( acc_c_req_o.q_valid  ),
     .ready_i    ( acc_c_rsp_i.q_ready  ),
     .data_o     ( acc_c_req_o.q        ),
-    .usage_o    ( /* unused */       )
+    .usage_o    ( /* unused */         )
   );
 
   // Sanity Checks

@@ -147,6 +147,7 @@ interface ACC_X_BUS #(
   data_t       q_rs2;
   data_t       q_rs3;
   logic [2:0]  q_rs_valid;
+  logic [1:0]  q_rd_clean;
   logic        q_valid;
 
   // Acknowledge Channel (K)
@@ -164,13 +165,13 @@ interface ACC_X_BUS #(
   logic       p_ready;
 
   modport in (
-    input q_instr_data, q_rs1, q_rs2, q_rs3, q_rs_valid, q_valid, p_ready,
+    input q_instr_data, q_rs1, q_rs2, q_rs3, q_rs_valid, q_rd_clean, q_valid, p_ready,
     output k_accept, k_writeback, q_ready,
     output p_data0, p_data1, p_dual_writeback, p_rd, p_error, p_valid
   );
 
   modport out (
-    output q_instr_data, q_rs1, q_rs2, q_rs3, q_rs_valid, q_valid, p_ready,
+    output q_instr_data, q_rs1, q_rs2, q_rs3, q_rs_valid, q_rd_clean, q_valid, p_ready,
     input k_accept, k_writeback, q_ready,
     input p_data0, p_data1, p_dual_writeback, p_rd, p_error, p_valid
   );
@@ -194,6 +195,7 @@ interface ACC_X_BUS_DV #(
   data_t       q_rs2;
   data_t       q_rs3;
   logic [2:0]  q_rs_valid;
+  logic [1:0]  q_rd_clean;
   logic        q_valid;
 
   // Acknowledge Channel (K)
@@ -211,19 +213,19 @@ interface ACC_X_BUS_DV #(
   logic       p_ready;
 
   modport in (
-    input q_instr_data, q_rs1, q_rs2, q_rs3, q_rs_valid, q_valid, p_ready,
+    input q_instr_data, q_rs1, q_rs2, q_rs3, q_rs_valid, q_rd_clean, q_valid, p_ready,
     output k_accept, k_writeback, q_ready,
     output p_data0, p_data1, p_dual_writeback, p_rd, p_error, p_valid
   );
 
   modport out (
-    output q_instr_data, q_rs1, q_rs2, q_rs3, q_rs_valid, q_valid, p_ready,
+    output q_instr_data, q_rs1, q_rs2, q_rs3, q_rs_valid, q_rd_clean, q_valid, p_ready,
     input k_accept, k_writeback, q_ready,
     input p_data0, p_data1, p_dual_writeback, p_rd, p_error, p_valid
   );
 
   modport monitor (
-    output q_instr_data, q_rs1, q_rs2, q_rs3, q_rs_valid, q_valid, p_ready,
+    output q_instr_data, q_rs1, q_rs2, q_rs3, q_rs_valid, q_rd_clean, q_valid, p_ready,
     input k_accept, k_writeback, q_ready,
     input p_data0, p_data1, p_dual_writeback, p_rd, p_error, p_valid
   );
@@ -241,6 +243,9 @@ interface ACC_X_BUS_DV #(
   assert property (@(posedge clk_i) (q_valid && q_rs_valid[0] && !q_ready |=> $stable(q_rs1)));
   assert property (@(posedge clk_i) (q_valid && q_rs_valid[1] && !q_ready |=> $stable(q_rs2)));
   assert property (@(posedge clk_i) (q_valid && q_rs_valid[2] && !q_ready |=> $stable(q_rs3)));
+
+  assert property (@(posedge clk_i)
+      (q_valid && q_ready |-> ((k_writeback ~^ q_rd_clean) | ~k_writeback) == '1));
 
   // p channel
   assert property (@(posedge clk_i) (p_valid && !p_ready |=> $stable(p_data0)));

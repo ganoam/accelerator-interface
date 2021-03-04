@@ -661,14 +661,17 @@ package acc_test;
     rand logic [DataWidth-1:0] rs2;
     rand logic [DataWidth-1:0] rs3;
     rand logic [2:0]           rs_valid;
+    rand logic [2:0]           rd_clean;
     // ACK channel
     rand logic       accept;
     rand logic [1:0] writeback;
 
     // Helper for randomization
     logic [2:0] last_rs_valid;
+    logic [2:0] last_rd_clean;
     function void post_randomize;
       last_rs_valid = rs_valid;
+      last_rd_clean = rd_clean;
     endfunction
 
     task display;
@@ -678,6 +681,7 @@ package acc_test;
               "x_req.rs2 = %x\n",         rs2,
               "x_req.rs3 = %x\n",         rs3,
               "x_req.rs_valid = %x\n",    rs_valid,
+              "x_req.rd_clean = %x\n",    rd_clean,
               "x_req.accept = %x\n",      accept,
               "x_req.writeback = %x\n",   writeback,
               "\n"
@@ -742,6 +746,7 @@ package acc_test;
       bus.q_rs2        <= '0;
       bus.q_rs3        <= '0;
       bus.q_rs_valid   <= '0;
+      bus.q_rd_clean   <= '0;
       bus.q_valid      <= '0;
       bus.p_ready      <= '0;
     endtask
@@ -773,6 +778,7 @@ package acc_test;
       bus.q_rs2        <= #TA req.rs2;
       bus.q_rs3        <= #TA req.rs3;
       bus.q_rs_valid   <= #TA req.rs_valid;
+      bus.q_rd_clean   <= #TA req.rd_clean;
       bus.q_valid      <= #TA 1;
       cycle_start();
       while (bus.q_ready != 1) begin
@@ -793,7 +799,14 @@ package acc_test;
             foreach(rs_valid[i]) last_rs_valid[i] == 1 -> rs_valid[i] == 1;
           }
         );
+        assert(
+          req.randomize(rd_clean) with {
+            // clean rd may not become dirty during transaction.
+            foreach(rd_clean[i]) last_rd_clean[i] == 1 -> rd_clean[i] == 1;
+          }
+        );
         bus.q_rs_valid <= #TA req.rs_valid;
+        bus.q_rd_clean <= #TA req.rd_clean;
         bus.q_rs1      <= #TA req.rs1;
         bus.q_rs2      <= #TA req.rs2;
         bus.q_rs3      <= #TA req.rs3;
@@ -801,13 +814,6 @@ package acc_test;
         cycle_start();
       end
       cycle_end();
-      /*
-      bus.q_instr_data <= #TA '0;
-      bus.q_rs1        <= #TA '0;
-      bus.q_rs2        <= #TA '0;
-      bus.q_rs3        <= #TA '0;
-      bus.q_rs_valid   <= #TA '0;
-      */
       bus.q_valid      <= #TA '0;
       req.writeback = bus.k_writeback;
       req.accept    = bus.k_accept;
@@ -851,6 +857,7 @@ package acc_test;
       req.rs2        = bus.q_rs2;
       req.rs3        = bus.q_rs3;
       req.rs_valid   = bus.q_rs_valid;
+      req.rd_clean   = bus.q_rd_clean;
       cycle_end();
       bus.q_ready     <= #TA 0;
       bus.k_accept    <= #TA '0;
@@ -882,6 +889,7 @@ package acc_test;
       req.rs2        = bus.q_rs2;
       req.rs3        = bus.q_rs3;
       req.rs_valid   = bus.q_rs_valid;
+      req.rd_clean   = bus.q_rd_clean;
       req.accept     = bus.k_accept;
       req.writeback  = bus.k_writeback;
       cycle_end();
@@ -1104,6 +1112,11 @@ package acc_test;
     rand logic [1:0] writeback;
     rand logic [2:0] use_rs;
 
+    constraint accept_c {
+      accept == 1'b0 -> writeback == '0;
+      accept == 1'b0 -> use_rs == '0;
+    };
+
     task display;
       $display(
               "prd_rsp.accept: %0d\n", accept,
@@ -1265,8 +1278,12 @@ package acc_test;
         for (int i=0; i<NumRspTot; i++) begin
 
           prd_rsp[i] = new;
-          assert(prd_rsp[i].randomize());
-          prd_rsp[i].accept = accept_onehot[i];
+          assert(
+            prd_rsp[i].randomize with {
+              accept == accept_onehot[i];
+            }
+          );
+          //prd_rsp[i].accept = accept_onehot[i];
         end
         /*
         $display("accept_onehot: %x", accept_onehot);

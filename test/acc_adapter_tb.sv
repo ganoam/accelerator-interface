@@ -257,7 +257,7 @@ module acc_adapter_tb #(
           c_req.display();
         end
         nr_requests++;
-        $display("Time %t. Request Accepted. Total Requests: %0d", $time,nr_requests);
+        //$display("Time %t. Request Accepted. Total Requests: %0d", $time,nr_requests);
       end
 
       // check rejected requests
@@ -276,7 +276,7 @@ module acc_adapter_tb #(
           end
         end
         nr_requests++;
-        $display("Time: %t. Request Rejected. Total Requests: %0d", $time, nr_requests);
+        //$display("Time: %t. Request Rejected. Total Requests: %0d", $time, nr_requests);
       end
       forever begin
         // wait for end of sim.
